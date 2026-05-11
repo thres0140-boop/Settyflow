@@ -44,7 +44,7 @@ model Thread {
   leadProviderId     String?  // Unipile attendee id
 
   // State
-  status             String   @default("new")   // new | qualified | call_booked | closed
+  status             String   @default("new")   // new | qualified | call_booked | follow_up | closed
   unreadCount        Int      @default(0)
   archived           Boolean  @default(false)
   lastMessageAt      DateTime?

@@ -1,4 +1,4 @@
-export type ThreadStatus = "new" | "qualified" | "call_booked" | "closed";
+export type ThreadStatus = "new" | "qualified" | "call_booked" | "follow_up" | "closed";
 
 export interface ThreadListItem {
   id: number;

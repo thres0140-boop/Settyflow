@@ -57,6 +57,7 @@ const STATUSES = [
   { key: "new", label: "New" },
   { key: "qualified", label: "Link Sent" },
   { key: "call_booked", label: "Call Booked" },
+  { key: "follow_up", label: "Follow Up" },
   { key: "closed", label: "Closed" },
 ];
 
