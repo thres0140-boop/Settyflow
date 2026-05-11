@@ -398,7 +398,12 @@ export default function ThreadPage() {
             e.preventDefault();
             send();
           }}
-          className="px-3 pt-3 pb-3 flex gap-2"
+          className="px-3 pt-3 flex gap-2"
+          style={{
+            // Push the input above the iOS home indicator so the textarea
+            // and send button stay fully visible.
+            paddingBottom: `calc(env(safe-area-inset-bottom) + 0.75rem)`,
+          }}
         >
           <textarea
             ref={textareaRef}
