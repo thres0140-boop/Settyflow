@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { STATUS_META, STATUS_ORDER } from "@/lib/statusColors";
-import { notifyThreadsChanged, notifyInsertText } from "@/lib/events";
+import { notifyThreadsChanged, notifyInsertText, notifyDismissInfoSheet } from "@/lib/events";
 
 interface ThreadDetailLike {
   id: number;
@@ -406,7 +406,10 @@ function TemplatesSection({ accountId }: { accountId: number }) {
             >
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => notifyInsertText(t.body)}
+                  onClick={() => {
+                    notifyInsertText(t.body);
+                    notifyDismissInfoSheet();
+                  }}
                   className="flex-1 text-left text-sm px-3 py-2 hover:bg-[var(--surface-2)]"
                   title={t.body}
                 >
@@ -511,6 +514,7 @@ function VoiceClipsSection({
       return;
     }
     notifyThreadsChanged();
+    notifyDismissInfoSheet();
   }
 
   async function remove(id: number) {

@@ -71,3 +71,18 @@ export function onServerEvent(handler: (e: ServerEvent) => void) {
     listeners.delete(handler);
   };
 }
+
+// ---- Dismiss the mobile info sheet ----------------------------------
+
+export const DISMISS_INFO_SHEET = "settyflow:dismiss-info-sheet";
+
+export function notifyDismissInfoSheet() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(DISMISS_INFO_SHEET));
+}
+
+export function onDismissInfoSheet(handler: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(DISMISS_INFO_SHEET, handler);
+  return () => window.removeEventListener(DISMISS_INFO_SHEET, handler);
+}

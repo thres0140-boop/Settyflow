@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import ThreadInfoPanel from "@/components/ThreadInfoPanel";
 import SwipeToReply from "@/components/SwipeToReply";
-import { notifyThreadsChanged, onInsertText, onServerEvent } from "@/lib/events";
+import {
+  notifyThreadsChanged,
+  onInsertText,
+  onServerEvent,
+  onDismissInfoSheet,
+} from "@/lib/events";
 import { getThreadCache, setThreadCache } from "@/lib/threadCache";
 
 interface Message {
@@ -72,6 +77,7 @@ export default function ThreadPage() {
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const didInitialScrollRef = useRef(false);
 
   // When threadId changes (e.g. switching chats), swap to the new thread's
   // cached data immediately to avoid showing the previous chat's content.
@@ -92,6 +98,14 @@ export default function ThreadPage() {
       setTimeout(() => textareaRef.current?.focus(), 0);
     });
   }, []);
+
+  // Dismiss the info sheet (e.g. after picking a template or sending a voice clip)
+  useEffect(() => {
+    return onDismissInfoSheet(() => {
+      if (infoOpen) toggleInfo();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infoOpen]);
   function toggleInfo() {
     if (!infoOpen) {
       setInfoOpen(true);
@@ -138,11 +152,24 @@ export default function ThreadPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Reset the "have we done the initial jump-to-bottom" flag whenever we
+  // switch to a different chat — otherwise opening a second chat would
+  // smooth-scroll from the top.
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    didInitialScrollRef.current = false;
+  }, [id]);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    if (!didInitialScrollRef.current) {
+      // First time we have messages — jump instantly to the bottom.
+      el.scrollTop = el.scrollHeight;
+      didInitialScrollRef.current = true;
+    } else {
+      // New message arrived later — smooth scroll.
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [thread?.messages.length]);
 
   async function send() {
@@ -513,7 +540,11 @@ export default function ThreadPage() {
             </div>
             <div
               className="flex-1 overflow-y-auto"
-              style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+              style={{
+                // Safe area + a bit extra so the Notes textarea isn't pinned
+                // under the home indicator on iOS.
+                paddingBottom: "calc(env(safe-area-inset-bottom) + 2.5rem)",
+              }}
             >
               <ThreadInfoPanel thread={thread} onUpdate={load} />
             </div>
