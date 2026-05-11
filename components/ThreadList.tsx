@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AccountBadge from "@/components/AccountBadge";
@@ -63,25 +63,33 @@ export default function ThreadList() {
   const [view, setView] = useState<"inbox" | "archive">("inbox");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  const [archivedCount, setArchivedCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   async function load() {
     const params = new URLSearchParams();
     if (accountFilter) params.set("accountId", String(accountFilter));
     if (q) params.set("q", q);
     if (view === "archive") params.set("archived", "true");
-    const [t, a] = await Promise.all([
+    const archivedParams = new URLSearchParams({ archived: "true", take: "1" });
+    const [t, a, archCount] = await Promise.all([
       fetch(`/api/threads?${params}`).then((r) => r.json()),
       fetch("/api/accounts").then((r) => r.json()),
+      // Lightweight count of archived threads (just length of returned array, capped)
+      fetch(`/api/threads?archived=true&take=200`)
+        .then((r) => r.json())
+        .then((d) => (d.threads ?? []).length)
+        .catch(() => 0),
     ]);
     setThreads(t.threads ?? []);
     setAccounts(a.accounts ?? []);
+    setArchivedCount(archCount);
     setLoading(false);
   }
 
   useEffect(() => {
     load();
-    // Poll every 5s. (SSE works in dev but not Vercel serverless across function
-    // instances — see lib/realtime.ts. Real fix is Pusher/Ably; until then, fast polling.)
     const id = setInterval(load, 5000);
     const offChange = onThreadsChanged(load);
     const offServer = onServerEvent((e) => {
@@ -108,91 +116,125 @@ export default function ThreadList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountFilter, q, view]);
 
-  // Ask for notification permission on first mount (no-op if already decided)
   useEffect(() => {
     ensureNotificationPermission();
   }, []);
+
+  // Close the dropdown menu when clicking outside it
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [menuOpen]);
+
+  const activeAccount = accounts.find((a) => a.id === accountFilter) ?? null;
 
   return (
     <>
       <header className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur border-b border-[var(--border)] pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
-          <h1 className="text-xl font-semibold flex-1">
-            {view === "archive" ? "Archive" : "Inbox"}
-          </h1>
-          <Link
-            href="/accounts"
-            className="text-sm text-[var(--muted)] hover:text-white"
-          >
-            Accounts
-          </Link>
-          <button
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              location.href = "/login";
-            }}
-            className="text-sm text-[var(--muted)] hover:text-white"
-          >
-            Sign out
-          </button>
-        </div>
-
-        <div className="px-4 pb-2 flex gap-1 border-b border-[var(--border)]">
-          <button
-            onClick={() => setView("inbox")}
-            className={`text-xs px-3 py-1.5 rounded-t-md font-medium ${
-              view === "inbox"
-                ? "text-white border-b-2 border-[var(--accent)] -mb-px"
-                : "text-[var(--muted)] hover:text-white"
-            }`}
-          >
-            Inbox
-          </button>
-          <button
-            onClick={() => setView("archive")}
-            className={`text-xs px-3 py-1.5 rounded-t-md font-medium ${
-              view === "archive"
-                ? "text-white border-b-2 border-[var(--accent)] -mb-px"
-                : "text-[var(--muted)] hover:text-white"
-            }`}
-          >
-            Archive
-          </button>
-        </div>
-
-        <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto">
-          <button
-            onClick={() => setAccountFilter(null)}
-            className={`shrink-0 text-xs px-3 py-1.5 rounded-full border ${
-              accountFilter === null
-                ? "bg-white text-black border-white"
-                : "border-[var(--border)] text-[var(--muted)]"
-            }`}
-          >
-            All ({threads.length})
-          </button>
-          {accounts.map((a) => (
+          {view === "archive" && (
             <button
-              key={a.id}
-              onClick={() => setAccountFilter(a.id)}
-              className={`shrink-0 text-xs px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
-                accountFilter === a.id
-                  ? "bg-white text-black border-white"
-                  : "border-[var(--border)] text-[var(--muted)]"
-              }`}
-              style={
-                accountFilter === a.id
-                  ? undefined
-                  : { borderColor: a.color, color: a.color }
-              }
+              onClick={() => setView("inbox")}
+              className="text-[var(--muted)] hover:text-white text-xl leading-none -ml-1 pr-1"
+              aria-label="Back to inbox"
             >
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: a.color }}
-              />
-              @{a.handle ?? a.displayName ?? "account"}
+              ←
             </button>
-          ))}
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold leading-none">
+              {view === "archive" ? "Archive" : "Inbox"}
+            </h1>
+            {activeAccount && view === "inbox" && (
+              <div
+                className="text-xs mt-0.5 truncate"
+                style={{ color: activeAccount.color }}
+              >
+                @{activeAccount.handle ?? activeAccount.displayName ?? "account"}
+              </div>
+            )}
+          </div>
+
+          {/* 3-dot menu */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)]"
+              aria-label="Menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="19" r="2" />
+              </svg>
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-2xl z-20 overflow-hidden">
+                <div className="px-3 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
+                  Filter accounts
+                </div>
+                <button
+                  onClick={() => {
+                    setAccountFilter(null);
+                    setMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--surface)] ${
+                    accountFilter === null ? "text-white" : "text-[var(--muted)]"
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/40" />
+                  <span className="flex-1 text-left">All accounts</span>
+                  {accountFilter === null && <span>✓</span>}
+                </button>
+                {accounts.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => {
+                      setAccountFilter(a.id);
+                      setMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--surface)] ${
+                      accountFilter === a.id ? "text-white" : "text-[var(--muted)]"
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: a.color }}
+                    />
+                    <span className="flex-1 text-left truncate">
+                      @{a.handle ?? a.displayName ?? "account"}
+                    </span>
+                    {accountFilter === a.id && <span>✓</span>}
+                  </button>
+                ))}
+                <div className="border-t border-[var(--border)] mt-1">
+                  <Link
+                    href="/accounts"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2.5 text-sm hover:bg-[var(--surface)]"
+                  >
+                    Manage accounts
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/auth/logout", { method: "POST" });
+                      location.href = "/login";
+                    }}
+                    className="block w-full text-left px-3 py-2.5 text-sm text-red-400 hover:bg-[var(--surface)]"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="px-4 pb-3">
@@ -200,12 +242,36 @@ export default function ThreadList() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search threads…"
-            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-full px-4 py-2 text-sm outline-none focus:border-[var(--accent)]"
           />
         </div>
       </header>
 
       <div className="divide-y divide-[var(--border)] overflow-y-auto">
+        {/* Archived row — only on inbox view, only if there's anything archived */}
+        {view === "inbox" && archivedCount > 0 && (
+          <button
+            onClick={() => setView("archive")}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface)] text-left"
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--surface-2)] text-[var(--muted)]">
+              {/* archive icon */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 7h18v4H3z" />
+                <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+                <path d="M10 15h4" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium">Archived</div>
+              <div className="text-xs text-[var(--muted)]">
+                {archivedCount} {archivedCount === 1 ? "thread" : "threads"}
+              </div>
+            </div>
+            <span className="text-[var(--muted)] text-lg">›</span>
+          </button>
+        )}
+
         {loading && (
           <div className="p-6 text-sm text-[var(--muted)]">Loading…</div>
         )}
