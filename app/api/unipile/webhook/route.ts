@@ -134,34 +134,49 @@ async function ingestMessage(
   );
   const direction: "in" | "out" = isOwn ? "out" : "in";
 
-  // Extract from payload first
+  // Extract from payload first.
+  //
+  // CRITICAL: for outbound messages (isOwn=true) the sender_* / attendee
+  // fields describe OUR coach account, not the lead — Instagram-generated
+  // events like "private reply to a comment" come through as outbound from
+  // the coach, and naively reading sender_name into leadName saved the
+  // coach's own display name as the lead. So we only consult these fields
+  // for inbound messages, and force a refetch from the chat attendees
+  // endpoint for outbound messages.
   const attendee = body.sender ?? body.attendees?.[0] ?? msg.sender ?? {};
-  let leadName: string =
-    msg.sender_name ??
-    msg.from_name ??
-    attendee.attendee_name ??
-    attendee.display_name ??
-    attendee.name ??
-    attendee.username ??
-    body.attendee_name ??
-    "";
-  let leadHandle: string | null =
-    msg.sender_username ??
-    msg.from_username ??
-    attendee.username ??
-    attendee.handle ??
-    null;
-  let leadProfilePic: string | null =
-    attendee.profile_picture_url ??
-    attendee.picture_url ??
-    attendee.attendee_picture_url ??
-    null;
-  let leadProviderId: string | null =
-    attendee.provider_id ??
-    attendee.attendee_provider_id ??
-    attendee.id ??
-    body.attendee_provider_id ??
-    null;
+  let leadName: string = "";
+  let leadHandle: string | null = null;
+  let leadProfilePic: string | null = null;
+  let leadProviderId: string | null = null;
+
+  if (!isOwn) {
+    leadName =
+      msg.sender_name ??
+      msg.from_name ??
+      attendee.attendee_name ??
+      attendee.display_name ??
+      attendee.name ??
+      attendee.username ??
+      body.attendee_name ??
+      "";
+    leadHandle =
+      msg.sender_username ??
+      msg.from_username ??
+      attendee.username ??
+      attendee.handle ??
+      null;
+    leadProfilePic =
+      attendee.profile_picture_url ??
+      attendee.picture_url ??
+      attendee.attendee_picture_url ??
+      null;
+    leadProviderId =
+      attendee.provider_id ??
+      attendee.attendee_provider_id ??
+      attendee.id ??
+      body.attendee_provider_id ??
+      null;
+  }
 
   let content: string =
     msg.text ??
@@ -177,11 +192,13 @@ async function ingestMessage(
     msg.timestamp ?? msg.created_at ?? msg.sent_at ?? body.timestamp;
   const sentAt = sentAtRaw ? new Date(sentAtRaw) : new Date();
 
-  // FALLBACK: if either content or lead identity is missing, refetch from Unipile.
-  // Webhook payloads are inconsistent across event types — the API is the source of truth.
+  // FALLBACK: if either content or lead identity is missing, refetch from
+  // Unipile. Webhook payloads are inconsistent across event types — the API
+  // is the source of truth. Outbound messages always trigger the refetch
+  // since the payload describes our side, not the lead's.
   const needsRefetch =
     unipileConfigured() &&
-    (!content || !leadName || (!leadHandle && !leadProviderId));
+    (isOwn || !content || !leadName || (!leadHandle && !leadProviderId));
 
   if (needsRefetch) {
     console.log(
@@ -253,6 +270,50 @@ async function ingestMessage(
       unreadCount: shouldBumpUnread ? ({ increment: 1 } as any) : undefined,
     },
   });
+
+  // First-time thread creation? Backfill the prior message history of this
+  // chat from Unipile so the user sees the conversation context, not just
+  // the single message that triggered the webhook. Skip silently if the
+  // refetch fails — the new message itself still gets inserted below.
+  const wasJustCreated = !existing;
+  if (wasJustCreated && unipileConfigured()) {
+    try {
+      const history: any = await getChatMessages(chatId, unipileAccountId, 30);
+      const items = (history.items ?? history.messages ?? []) as any[];
+      // Unipile returns newest-first; reverse for chronological insert.
+      const ordered = [...items].reverse();
+      for (const m of ordered) {
+        const histId: string | null = m.id ?? null;
+        // Skip the one that arrived in this webhook payload — we'll create
+        // it below with the deduped logic.
+        if (histId && unipileMsgId && histId === unipileMsgId) continue;
+        if (histId) {
+          const dup = await prisma.message.findUnique({
+            where: { unipileMsgId: histId },
+          });
+          if (dup) continue;
+        }
+        const histIsOwn: boolean = Boolean(m.is_sender);
+        await prisma.message.create({
+          data: {
+            threadId: thread.id,
+            accountId,
+            unipileMsgId: histId,
+            direction: histIsOwn ? "out" : "in",
+            content: m.text ?? "",
+            authorName: histIsOwn ? null : leadName,
+            authorHandle: histIsOwn ? null : leadHandle,
+            sentAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+          },
+        });
+      }
+      console.log(
+        `[webhook] backfilled ${ordered.length} historical messages for new thread ${thread.id}`,
+      );
+    } catch (e) {
+      console.warn(`[webhook] history backfill failed for chat ${chatId}:`, e);
+    }
+  }
 
   // Dedup on unipileMsgId when available
   if (unipileMsgId) {
