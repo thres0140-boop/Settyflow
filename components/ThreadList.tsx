@@ -6,10 +6,7 @@ import { usePathname } from "next/navigation";
 import AccountBadge from "@/components/AccountBadge";
 import { statusColor, statusLabel } from "@/lib/statusColors";
 import { onThreadsChanged, onServerEvent } from "@/lib/events";
-import {
-  ensureNotificationPermission,
-  notifyIfBackgrounded,
-} from "@/lib/notifications";
+import { notifyIfBackgrounded } from "@/lib/notifications";
 import { registerPush } from "@/lib/push-client";
 
 interface ThreadRow {
@@ -117,16 +114,36 @@ export default function ThreadList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountFilter, q, view]);
 
+  // Push notification state — drives the "Enable notifications" banner below.
+  const [pushState, setPushState] = useState<
+    "unknown" | "needs_gesture" | "ok" | "denied" | "unsupported"
+  >("unknown");
+
   useEffect(() => {
-    ensureNotificationPermission();
-    // Register service worker + subscribe to web push (idempotent).
-    // Only meaningfully works on iOS when the site has been added to home screen.
-    registerPush().then((status) => {
-      if (status !== "ok" && status !== "skipped") {
-        console.log("[push] register status:", status);
-      }
-    });
+    if (typeof window === "undefined") return;
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setPushState("unsupported");
+      return;
+    }
+    const perm = Notification.permission;
+    if (perm === "granted") {
+      // Already granted — silently ensure the subscription is current.
+      registerPush().then((s) => setPushState(s === "ok" ? "ok" : "denied"));
+    } else if (perm === "denied") {
+      setPushState("denied");
+    } else {
+      // iOS requires a user gesture before showing the permission prompt.
+      setPushState("needs_gesture");
+    }
   }, []);
+
+  async function enablePush() {
+    const status = await registerPush();
+    if (status === "ok") setPushState("ok");
+    else if (status === "denied") setPushState("denied");
+    else if (status === "unsupported") setPushState("unsupported");
+    else alert(`Push setup failed: ${status}`);
+  }
 
   // Close the dropdown menu when clicking outside it
   useEffect(() => {
@@ -253,6 +270,19 @@ export default function ThreadList() {
             className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-full px-4 py-2 text-sm outline-none focus:border-[var(--accent)]"
           />
         </div>
+
+        {pushState === "needs_gesture" && (
+          <button
+            onClick={enablePush}
+            className="w-full flex items-center gap-3 px-4 py-2.5 bg-[var(--accent)]/15 border-t border-b border-[var(--accent)]/30 hover:bg-[var(--accent)]/25 text-sm"
+          >
+            <span>🔔</span>
+            <span className="flex-1 text-left text-white">
+              Enable notifications for new DMs
+            </span>
+            <span className="text-[var(--accent)]">Enable →</span>
+          </button>
+        )}
       </header>
 
       <div className="divide-y divide-[var(--border)] overflow-y-auto">
