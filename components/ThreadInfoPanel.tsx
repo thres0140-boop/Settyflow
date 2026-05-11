@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { STATUS_META, STATUS_ORDER } from "@/lib/statusColors";
 import { notifyThreadsChanged, notifyInsertText, notifyDismissInfoSheet } from "@/lib/events";
+import { leadLabel, leadInitial } from "@/lib/leadLabel";
 
 interface ThreadDetailLike {
   id: number;
@@ -131,16 +132,11 @@ export default function ThreadInfoPanel({
             className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-medium shrink-0"
             style={{ backgroundColor: thread.account.color }}
           >
-            {thread.leadName.charAt(0).toUpperCase()}
+            {leadInitial(thread)}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <div className="font-semibold truncate">{thread.leadName}</div>
-          {thread.leadHandle && (
-            <div className="text-xs text-[var(--muted)] truncate">
-              @{thread.leadHandle}
-            </div>
-          )}
+          <div className="font-semibold truncate">{leadLabel(thread)}</div>
           {igUrl && (
             <a
               href={igUrl}

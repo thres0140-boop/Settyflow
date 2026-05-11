@@ -10,6 +10,7 @@ import { notifyIfBackgrounded } from "@/lib/notifications";
 import { registerPush } from "@/lib/push-client";
 import SwipeToArchive from "@/components/SwipeToArchive";
 import { STATUS_META, STATUS_ORDER } from "@/lib/statusColors";
+import { leadLabel, leadInitial } from "@/lib/leadLabel";
 
 interface ThreadRow {
   id: number;
@@ -135,7 +136,7 @@ export default function ThreadList() {
         load();
         if (e.type === "message.created" && e.direction === "in") {
           notifyIfBackgrounded({
-            title: `${e.leadName}${e.leadHandle ? ` (@${e.leadHandle})` : ""}`,
+            title: e.leadHandle ? `@${e.leadHandle}` : e.leadName,
             body: `${e.accountHandle ? `via @${e.accountHandle} · ` : ""}${e.preview}`,
             icon: e.leadProfilePic ?? "/icon-192.png",
             tag: `thread-${e.threadId}`,
@@ -533,7 +534,7 @@ export default function ThreadList() {
                     className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium"
                     style={{ backgroundColor: t.account.color }}
                   >
-                    {t.leadName.charAt(0).toUpperCase()}
+                    {leadInitial(t)}
                   </div>
                 )}
                 <span
@@ -545,12 +546,7 @@ export default function ThreadList() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-medium truncate">{t.leadName}</span>
-                  {t.leadHandle && (
-                    <span className="text-xs text-[var(--muted)] truncate">
-                      @{t.leadHandle}
-                    </span>
-                  )}
+                  <span className="font-medium truncate">{leadLabel(t)}</span>
                   <span className="ml-auto text-xs text-[var(--muted)] shrink-0">
                     {timeAgo(t.lastMessageAt)}
                   </span>

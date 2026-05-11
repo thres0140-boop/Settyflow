@@ -12,6 +12,7 @@ import {
   onDismissInfoSheet,
 } from "@/lib/events";
 import { getThreadCache, setThreadCache } from "@/lib/threadCache";
+import { leadLabel, leadInitial } from "@/lib/leadLabel";
 
 interface Message {
   id: number;
@@ -210,7 +211,7 @@ export default function ThreadPage() {
       snippet: m.content.slice(0, 200),
       authorLabel: mine
         ? `@${thread.account.handle ?? thread.account.displayName ?? "you"}`
-        : thread.leadName,
+        : leadLabel(thread),
     });
     setTimeout(() => textareaRef.current?.focus(), 0);
   }
@@ -266,13 +267,13 @@ export default function ThreadPage() {
               className="w-9 h-9 rounded-full flex items-center justify-center text-white font-medium"
               style={{ backgroundColor: thread.account.color }}
             >
-              {thread.leadName.charAt(0).toUpperCase()}
+              {leadInitial(thread)}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="font-medium truncate">{thread.leadName}</div>
+            <div className="font-medium truncate">{leadLabel(thread)}</div>
             <div className="text-xs text-[var(--muted)] truncate">
-              {thread.leadHandle && <>@{thread.leadHandle} · </>}via{" "}
+              via{" "}
               <span style={{ color: thread.account.color }}>
                 @{thread.account.handle ?? thread.account.displayName ?? "account"}
               </span>
@@ -324,7 +325,7 @@ export default function ThreadPage() {
           const hasReply = Boolean(m.replyToSnippet);
           const replyAuthor = m.replyToFromMe
             ? `@${thread.account.handle ?? thread.account.displayName ?? "you"}`
-            : (m.replyToAuthorName ?? thread.leadName);
+            : (m.replyToAuthorName ?? leadLabel(thread));
           return (
             <SwipeToReply key={m.id} onReply={() => startReply(m)}>
             <div
