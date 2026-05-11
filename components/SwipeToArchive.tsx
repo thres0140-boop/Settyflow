@@ -20,10 +20,15 @@ const COMMIT_TRAVEL = 600; // how far the row flies off after commit
 export default function SwipeToArchive({
   onArchive,
   children,
+  mode = "archive",
 }: {
   onArchive: () => void;
   children: React.ReactNode;
+  /** "archive" reveals a green Archive band; "unarchive" reveals a blue Unarchive band. */
+  mode?: "archive" | "unarchive";
 }) {
+  const label = mode === "archive" ? "Archive" : "Unarchive";
+  const activeBg = mode === "archive" ? "#16a34a" /* green-600 */ : "#2563eb" /* blue-600 */;
   const [tx, setTx] = useState(0);
   const [committing, setCommitting] = useState(false);
   const startX = useRef<number | null>(null);
@@ -126,7 +131,7 @@ export default function SwipeToArchive({
         aria-hidden
         className="absolute inset-0 flex items-center justify-start pl-5 pointer-events-none"
         style={{
-          background: past ? "#16a34a" /* green-600 */ : "var(--surface-2)",
+          background: past ? activeBg : "var(--surface-2)",
           transition: "background 120ms",
         }}
       >
@@ -134,12 +139,22 @@ export default function SwipeToArchive({
           className="flex items-center gap-2 text-white"
           style={{ opacity: progress }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 7h18v4H3z" />
-            <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
-            <path d="M10 15h4" />
-          </svg>
-          <span className="text-sm font-medium">Archive</span>
+          {mode === "archive" ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7h18v4H3z" />
+              <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+              <path d="M10 15h4" />
+            </svg>
+          ) : (
+            /* unarchive — box with an up-arrow coming out of it */
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7h18v4H3z" />
+              <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+              <path d="M12 18v-7" />
+              <path d="M9 14l3-3 3 3" />
+            </svg>
+          )}
+          <span className="text-sm font-medium">{label}</span>
         </div>
       </div>
 

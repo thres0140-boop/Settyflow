@@ -162,22 +162,26 @@ export default function ThreadList() {
     }
   }, []);
 
-  // Optimistic archive — pull the row out of state immediately (so the swipe
-  // animation reads as a clean disappear), then fire the PATCH. If it fails
-  // we just reload from the source of truth.
-  async function archiveThread(threadId: number) {
-    setInboxThreads((prev) => prev.filter((t) => t.id !== threadId));
+  // Optimistic archive / unarchive — pull the row out of its source list
+  // immediately (so the swipe animation reads as a clean disappear), then
+  // fire the PATCH. If it fails we reload from the source of truth.
+  async function setThreadArchived(threadId: number, archived: boolean) {
+    if (archived) {
+      setInboxThreads((prev) => prev.filter((t) => t.id !== threadId));
+    } else {
+      setArchivedThreads((prev) => prev.filter((t) => t.id !== threadId));
+    }
     try {
       const res = await fetch(`/api/threads/${threadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ archived: true }),
+        body: JSON.stringify({ archived }),
       });
-      if (!res.ok) throw new Error(`archive failed: ${res.status}`);
-      // Refresh both lists so the archive view picks up the new thread.
+      if (!res.ok) throw new Error(`patch failed: ${res.status}`);
+      // Refresh both lists so the other view picks up the moved thread.
       notifyThreadsChanged();
     } catch (e) {
-      console.warn("[archive] failed, reloading:", e);
+      console.warn("[archive-toggle] failed, reloading:", e);
       load();
     }
   }
@@ -467,15 +471,13 @@ export default function ThreadList() {
               </div>
             </Link>
           );
-          // Only allow swipe-to-archive on the inbox view (no point archiving
-          // an already-archived thread, and the gesture would be confusing).
-          if (isArchiveView) {
-            return <div key={t.id}>{row}</div>;
-          }
+          // Swipe-right archives on inbox view, unarchives on archive view —
+          // same gesture, opposite direction in the data model.
           return (
             <SwipeToArchive
               key={t.id}
-              onArchive={() => archiveThread(t.id)}
+              mode={isArchiveView ? "unarchive" : "archive"}
+              onArchive={() => setThreadArchived(t.id, !isArchiveView)}
             >
               {row}
             </SwipeToArchive>
