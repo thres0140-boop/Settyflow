@@ -273,7 +273,8 @@ export default function ThreadPage() {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-2 min-h-0"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-2 min-h-0"
+        style={{ overscrollBehaviorX: "contain" }}
       >
         {thread.messages.length === 0 && (
           <div className="text-center text-sm text-[var(--muted)] py-8">

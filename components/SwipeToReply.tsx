@@ -42,6 +42,11 @@ export default function SwipeToReply({
     }
 
     if (lock.current !== "horizontal" || dx <= 0) return;
+
+    // Once we've claimed the gesture, stop the touch from bubbling so the
+    // parent scroll container / send button don't also act on it.
+    e.stopPropagation();
+
     const clamped = Math.min(MAX, dx);
     setTx(clamped);
 
@@ -55,8 +60,13 @@ export default function SwipeToReply({
     }
   }
 
-  function end() {
-    if (lock.current === "horizontal" && triggered.current) {
+  function end(e: React.TouchEvent) {
+    const wasHorizontal = lock.current === "horizontal";
+    if (wasHorizontal && triggered.current) {
+      // Prevent the synthetic click event iOS fires after touchend from
+      // hitting the send button or anything else underneath.
+      e.preventDefault();
+      e.stopPropagation();
       onReply();
     }
     setTx(0);
