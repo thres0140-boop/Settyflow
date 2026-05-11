@@ -72,6 +72,23 @@ export default function AccountsPage() {
     }
   }
 
+  async function cleanupOld(id: number) {
+    const ok = confirm(
+      "Delete all threads on this account with no activity since you connected it?\n\n" +
+        "Useful right after connecting an IG account that has years of old DMs. " +
+        "Threads with new messages going forward (from webhooks) are unaffected.",
+    );
+    if (!ok) return;
+    const res = await fetch(`/api/accounts/${id}/cleanup-old`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`Deleted ${data.deletedThreads} old threads. Kept ${data.keptThreads}.`);
+      load();
+    } else {
+      alert(`Cleanup failed: ${data.error ?? "unknown"}`);
+    }
+  }
+
   async function disconnect(id: number) {
     const ok = confirm(
       "Remove this account from Settyflow?\n\n" +
@@ -175,6 +192,13 @@ export default function AccountsPage() {
               className="text-xs border border-[var(--border)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--surface-2)]"
             >
               {syncing === a.id ? "Syncing…" : "Sync now"}
+            </button>
+            <button
+              onClick={() => cleanupOld(a.id)}
+              className="text-xs border border-[var(--border)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--surface-2)]"
+              title="Delete old threads imported before this account was connected"
+            >
+              Clean old
             </button>
             <button
               onClick={() => disconnect(a.id)}

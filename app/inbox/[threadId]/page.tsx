@@ -274,7 +274,7 @@ export default function ThreadPage() {
             <div className="text-xs text-[var(--muted)] truncate">
               {thread.leadHandle && <>@{thread.leadHandle} · </>}via{" "}
               <span style={{ color: thread.account.color }}>
-                @{thread.account.handle ?? thread.account.displayName}
+                @{thread.account.handle ?? thread.account.displayName ?? "account"}
               </span>
             </div>
           </div>
@@ -461,7 +461,7 @@ export default function ThreadPage() {
             placeholder={
               replyTo
                 ? `Reply to ${replyTo.authorLabel}…`
-                : `Reply as @${thread.account.handle ?? thread.account.displayName}…`
+                : `Reply as @${thread.account.handle ?? thread.account.displayName ?? "account"}…`
             }
             rows={1}
             onKeyDown={(e) => {
