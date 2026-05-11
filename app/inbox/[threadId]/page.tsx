@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import ThreadInfoPanel from "@/components/ThreadInfoPanel";
+import SwipeToReply from "@/components/SwipeToReply";
 import { notifyThreadsChanged, onInsertText, onServerEvent } from "@/lib/events";
 import { getThreadCache, setThreadCache } from "@/lib/threadCache";
 
@@ -284,8 +285,8 @@ export default function ThreadPage() {
             ? `@${thread.account.handle ?? thread.account.displayName ?? "you"}`
             : (m.replyToAuthorName ?? thread.leadName);
           return (
+            <SwipeToReply key={m.id} onReply={() => startReply(m)}>
             <div
-              key={m.id}
               className={`group flex items-end gap-2 ${
                 mine ? "justify-end" : "justify-start"
               }`}
@@ -360,6 +361,7 @@ export default function ThreadPage() {
                 </div>
               )}
             </div>
+            </SwipeToReply>
           );
         })}
       </div>
