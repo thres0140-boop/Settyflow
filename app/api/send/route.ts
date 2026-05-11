@@ -42,27 +42,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Build the actual outgoing text. Unipile's quote_id doesn't render as a
-  // native quoted reply on Instagram (unlike WhatsApp/LinkedIn), so we prepend
-  // the quoted snippet inline as a fallback. Local UI still displays the
-  // proper quoted bubble using replyToSnippet metadata.
-  let outgoingText = String(text);
-  if (replyMeta && replyMeta.snippet) {
-    const author = replyMeta.fromMe
-      ? "you"
-      : (replyMeta.authorName ?? thread.leadName);
-    const quote = replyMeta.snippet
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n");
-    outgoingText = `↳ Replying to ${author}:\n${quote}\n\n${outgoingText}`;
-  }
-
+  // Send the user's text as-is; rely on Unipile's quote_id for the native
+  // Instagram quoted-reply UI. (We previously prepended an inline "Replying
+  // to…" prefix as a fallback — turned out to be ugly on IG.) If Unipile
+  // doesn't honor quote_id for IG the message still arrives, just without
+  // the native quote bubble.
   try {
     const result: any = await sendChatMessage(
       thread.chatId,
       thread.account.unipileAccountId,
-      outgoingText,
+      String(text),
       replyMeta?.unipileId ?? null,
     );
 
