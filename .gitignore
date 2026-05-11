@@ -1,0 +1,22 @@
+node_modules/
+.next/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated Prisma client (rebuilt on `prisma generate`)
+app/generated/
+
+.env
+.env.local
+.env*.local
+
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal
+
+ios/
+android/
+.DS_Store
+storage/

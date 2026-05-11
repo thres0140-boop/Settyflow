@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma/client"
+}
+
+// SQLite for local dev. Swap to "postgresql" + POSTGRES_PRISMA_URL for Vercel/Neon.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A connected Instagram coach account (one row per coach you set for).
+model Account {
+  id               Int      @id @default(autoincrement())
+  unipileAccountId String   @unique
+  handle           String?
+  displayName      String?
+  profilePicUrl    String?
+  color            String   @default("#6366f1")
+  status           String   @default("active") // active | error | disconnected
+  lastSyncedAt     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  threads     Thread[]
+  messages    Message[]
+  voiceClips  VoiceClip[]
+}
+
+// One DM conversation between a coach account and a lead.
+model Thread {
+  id                 Int      @id @default(autoincrement())
+  accountId          Int
+  chatId             String   // Unipile chat ID
+
+  // The other party in the conversation
+  leadName           String
+  leadHandle         String?
+  leadProfilePic     String?
+  leadProviderId     String?  // Unipile attendee id
+
+  // State
+  status             String   @default("new")   // new | qualified | call_booked | closed
+  unreadCount        Int      @default(0)
+  archived           Boolean  @default(false)
+  lastMessageAt      DateTime?
+  lastMessagePreview String?
+  lastMessageFromMe  Boolean  @default(false)
+
+  // Optional
+  notes              String?
+  tags               String   @default("[]")    // JSON array of strings
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  account  Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([accountId, chatId])
+  @@index([lastMessageAt])
+  @@index([accountId, archived, lastMessageAt])
+}
+
+model Message {
+  id            Int      @id @default(autoincrement())
+  threadId      Int
+  accountId     Int
+  unipileMsgId  String?  @unique
+
+  direction     String   // "in" | "out"
+  content       String
+  authorHandle  String?
+  authorName    String?
+
+  // Reply-to metadata. Populated when this message quotes another.
+  replyToUnipileMsgId String?
+  replyToSnippet      String?
+  replyToFromMe       Boolean?
+  replyToAuthorName   String?
+
+  attachments   String   @default("[]") // JSON array of urls/refs
+  sentAt        DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  thread  Thread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, sentAt])
+  @@index([accountId, sentAt])
+}
+
+// Pre-recorded voice notes the setter can fire into any thread.
+model VoiceClip {
+  id          Int      @id @default(autoincrement())
+  accountId   Int
+  label       String
+  filename    String   // stored on disk under STORAGE_DIR/voice/<accountId>/
+  contentType String   @default("audio/mp4")
+  sizeBytes   Int      @default(0)
+  durationMs  Int?
+  createdAt   DateTime @default(now())
+
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+// Optional saved replies (templates) per account.
+model SavedReply {
+  id        Int      @id @default(autoincrement())
+  accountId Int?     // null = global template
+  label     String
+  body      String
+  createdAt DateTime @default(now())
+}
