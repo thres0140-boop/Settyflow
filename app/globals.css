@@ -64,6 +64,16 @@ html, body {
   }
 }
 
+/* Bottom-sheet entrance (used on mobile for the thread info panel) */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 * { box-sizing: border-box; }
 
 button { cursor: pointer; }

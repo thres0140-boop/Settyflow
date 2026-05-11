@@ -456,9 +456,47 @@ export default function ThreadPage() {
         </div>
       )}
       </div>
+
+      {/* Desktop: right-side panel */}
       {infoOpen && (
         <div className="hidden md:flex">
           <ThreadInfoPanel thread={thread} onUpdate={load} />
+        </div>
+      )}
+
+      {/* Mobile: bottom sheet */}
+      {infoOpen && (
+        <div className="md:hidden fixed inset-0 z-30 flex flex-col">
+          {/* Scrim */}
+          <button
+            aria-label="Close"
+            onClick={toggleInfo}
+            className="flex-1 bg-black/60 backdrop-blur-sm"
+          />
+          {/* Sheet */}
+          <div
+            className="bg-[var(--background)] rounded-t-2xl shadow-2xl border-t border-[var(--border)] overflow-hidden flex flex-col"
+            style={{
+              maxHeight: "85dvh",
+              height: "85dvh",
+              animation: "sheet-up 240ms cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
+            {/* Drag handle + close */}
+            <div className="flex items-center justify-center py-2.5 relative">
+              <span className="w-9 h-1 rounded-full bg-[var(--border)]" />
+              <button
+                onClick={toggleInfo}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)] text-lg"
+                aria-label="Close info"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <ThreadInfoPanel thread={thread} onUpdate={load} />
+            </div>
+          </div>
         </div>
       )}
     </div>

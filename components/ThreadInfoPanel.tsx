@@ -116,7 +116,7 @@ export default function ThreadInfoPanel({
     : null;
 
   return (
-    <aside className="w-80 shrink-0 border-l border-[var(--border)] bg-[var(--background)] overflow-y-auto">
+    <aside className="md:w-80 w-full md:shrink-0 md:border-l border-[var(--border)] bg-[var(--background)] md:overflow-y-auto">
       <div className="p-5 flex flex-col items-center text-center border-b border-[var(--border)]">
         {thread.leadProfilePic ? (
           // eslint-disable-next-line @next/next/no-img-element
