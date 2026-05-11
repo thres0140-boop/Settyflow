@@ -239,10 +239,7 @@ export default function ThreadList() {
           Filter accounts
         </div>
         <button
-          onClick={() => {
-            setAccountFilter(null);
-            closeMenu();
-          }}
+          onClick={() => setAccountFilter(null)}
           className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
             accountFilter === null ? "text-white" : "text-[var(--muted)]"
           }`}
@@ -254,10 +251,7 @@ export default function ThreadList() {
         {accounts.map((a) => (
           <button
             key={a.id}
-            onClick={() => {
-              setAccountFilter(a.id);
-              closeMenu();
-            }}
+            onClick={() => setAccountFilter(a.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
               accountFilter === a.id ? "text-white" : "text-[var(--muted)]"
             }`}
@@ -277,10 +271,7 @@ export default function ThreadList() {
           Filter by status
         </div>
         <button
-          onClick={() => {
-            setStatusFilter(null);
-            closeMenu();
-          }}
+          onClick={() => setStatusFilter(null)}
           className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
             statusFilter === null ? "text-white" : "text-[var(--muted)]"
           }`}
@@ -292,10 +283,7 @@ export default function ThreadList() {
         {STATUS_ORDER.map((key) => (
           <button
             key={key}
-            onClick={() => {
-              setStatusFilter(key);
-              closeMenu();
-            }}
+            onClick={() => setStatusFilter(key)}
             className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
               statusFilter === key ? "text-white" : "text-[var(--muted)]"
             }`}
