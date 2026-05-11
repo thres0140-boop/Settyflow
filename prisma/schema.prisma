@@ -3,10 +3,14 @@ generator client {
   output   = "../app/generated/prisma/client"
 }
 
-// SQLite for local dev. Swap to "postgresql" + POSTGRES_PRISMA_URL for Vercel/Neon.
+// Postgres on Vercel/Neon. The Vercel + Neon integration auto-injects
+// POSTGRES_PRISMA_URL (pooled, for runtime) and POSTGRES_URL_NON_POOLING (direct, for migrations).
+// For local dev, set the same env vars in .env.local pointing at a Neon dev branch
+// (or run a local Postgres and point both at it).
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 // A connected Instagram coach account (one row per coach you set for).
