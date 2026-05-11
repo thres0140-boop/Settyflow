@@ -68,6 +68,7 @@ export default function ThreadPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [infoClosing, setInfoClosing] = useState(false);
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -92,13 +93,22 @@ export default function ThreadPage() {
     });
   }, []);
   function toggleInfo() {
-    setInfoOpen((v) => {
-      const next = !v;
+    if (!infoOpen) {
+      setInfoOpen(true);
       if (typeof window !== "undefined") {
-        localStorage.setItem("settyflow:infoPanel", next ? "open" : "closed");
+        localStorage.setItem("settyflow:infoPanel", "open");
       }
-      return next;
-    });
+      return;
+    }
+    // Animate the close
+    setInfoClosing(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("settyflow:infoPanel", "closed");
+    }
+    window.setTimeout(() => {
+      setInfoOpen(false);
+      setInfoClosing(false);
+    }, 240);
   }
 
   async function load() {
@@ -467,11 +477,17 @@ export default function ThreadPage() {
       {/* Mobile: bottom sheet */}
       {infoOpen && (
         <div className="md:hidden fixed inset-0 z-30 flex flex-col">
-          {/* Scrim */}
+          {/* Scrim — fades in/out with the sheet */}
           <button
             aria-label="Close"
             onClick={toggleInfo}
-            className="flex-1 bg-black/60 backdrop-blur-sm"
+            className="flex-1 backdrop-blur-sm"
+            style={{
+              background: "rgba(0,0,0,0.6)",
+              animation: infoClosing
+                ? "scrim-fade-out 240ms ease forwards"
+                : "scrim-fade-in 240ms ease forwards",
+            }}
           />
           {/* Sheet */}
           <div
@@ -479,21 +495,26 @@ export default function ThreadPage() {
             style={{
               maxHeight: "85dvh",
               height: "85dvh",
-              animation: "sheet-up 240ms cubic-bezier(0.32, 0.72, 0, 1)",
+              animation: infoClosing
+                ? "sheet-down 240ms cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "sheet-up 240ms cubic-bezier(0.32, 0.72, 0, 1)",
             }}
           >
-            {/* Drag handle + close */}
-            <div className="flex items-center justify-center py-2.5 relative">
+            {/* Drag handle + close (compact) */}
+            <div className="flex items-center justify-center py-2 relative shrink-0">
               <span className="w-9 h-1 rounded-full bg-[var(--border)]" />
               <button
                 onClick={toggleInfo}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)] text-lg"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)] text-base"
                 aria-label="Close info"
               >
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            >
               <ThreadInfoPanel thread={thread} onUpdate={load} />
             </div>
           </div>

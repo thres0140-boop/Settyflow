@@ -117,38 +117,41 @@ export default function ThreadInfoPanel({
 
   return (
     <aside className="md:w-80 w-full md:shrink-0 md:border-l border-[var(--border)] bg-[var(--background)] md:overflow-y-auto">
-      <div className="p-5 flex flex-col items-center text-center border-b border-[var(--border)]">
+      {/* Compact header: avatar on the left, name/handle/IG-link stacked next to it */}
+      <div className="p-4 flex items-center gap-3 border-b border-[var(--border)]">
         {thread.leadProfilePic ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thread.leadProfilePic}
             alt=""
-            className="w-20 h-20 rounded-full object-cover"
+            className="w-14 h-14 rounded-full object-cover shrink-0"
           />
         ) : (
           <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-medium"
+            className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-medium shrink-0"
             style={{ backgroundColor: thread.account.color }}
           >
             {thread.leadName.charAt(0).toUpperCase()}
           </div>
         )}
-        <div className="mt-3 font-medium">{thread.leadName}</div>
-        {thread.leadHandle && (
-          <div className="text-sm text-[var(--muted)]">
-            @{thread.leadHandle}
-          </div>
-        )}
-        {igUrl && (
-          <a
-            href={igUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)]"
-          >
-            Open on Instagram ↗
-          </a>
-        )}
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold truncate">{thread.leadName}</div>
+          {thread.leadHandle && (
+            <div className="text-xs text-[var(--muted)] truncate">
+              @{thread.leadHandle}
+            </div>
+          )}
+          {igUrl && (
+            <a
+              href={igUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block mt-1 text-[11px] text-[var(--accent)] hover:underline"
+            >
+              Open on Instagram ↗
+            </a>
+          )}
+        </div>
       </div>
 
       <Section title="Chatting via">
