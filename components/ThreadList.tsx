@@ -9,6 +9,7 @@ import { onThreadsChanged, onServerEvent, notifyThreadsChanged } from "@/lib/eve
 import { notifyIfBackgrounded } from "@/lib/notifications";
 import { registerPush } from "@/lib/push-client";
 import SwipeToArchive from "@/components/SwipeToArchive";
+import { STATUS_META, STATUS_ORDER } from "@/lib/statusColors";
 
 interface ThreadRow {
   id: number;
@@ -62,12 +63,14 @@ export default function ThreadList() {
   const [archivedThreads, setArchivedThreads] = useState<ThreadRow[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [accountFilter, setAccountFilter] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [view, setView] = useState<"inbox" | "archive">("inbox");
   const [onlyUnanswered, setOnlyUnanswered] = useState(false);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   const threads = view === "archive" ? archivedThreads : inboxThreads;
   const archivedCount = archivedThreads.length;
@@ -77,6 +80,7 @@ export default function ThreadList() {
     function buildParams(archived: boolean) {
       const params = new URLSearchParams();
       if (accountFilter) params.set("accountId", String(accountFilter));
+      if (statusFilter) params.set("status", statusFilter);
       if (q) params.set("q", q);
       if (onlyUnanswered) params.set("unanswered", "true");
       if (archived) params.set("archived", "true");
@@ -137,7 +141,7 @@ export default function ThreadList() {
       offServer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountFilter, q, onlyUnanswered]);
+  }, [accountFilter, statusFilter, q, onlyUnanswered]);
 
   // Push notification state — drives the "Enable notifications" banner below.
   const [pushState, setPushState] = useState<
@@ -194,11 +198,16 @@ export default function ThreadList() {
     else alert(`Push setup failed: ${status}`);
   }
 
-  // Close the dropdown menu when clicking outside it
+  // Close the dropdown menu when clicking outside the panel AND outside the
+  // toggle button (otherwise outside-click would race the button's own
+  // toggle and the menu would never open).
   useEffect(() => {
     if (!menuOpen) return;
     function onDocClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      const insidePanel = menuPanelRef.current?.contains(t);
+      const insideButton = menuButtonRef.current?.contains(t);
+      if (!insidePanel && !insideButton) {
         setMenuOpen(false);
       }
     }
@@ -235,80 +244,21 @@ export default function ThreadList() {
             )}
           </div>
 
-          {/* 3-dot menu */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)]"
-              aria-label="Menu"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="12" cy="5" r="2" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="12" cy="19" r="2" />
-              </svg>
-            </button>
-
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-64 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl shadow-2xl z-20 overflow-hidden">
-                <div className="px-3 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
-                  Filter accounts
-                </div>
-                <button
-                  onClick={() => {
-                    setAccountFilter(null);
-                    setMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--surface)] ${
-                    accountFilter === null ? "text-white" : "text-[var(--muted)]"
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-white/40" />
-                  <span className="flex-1 text-left">All accounts</span>
-                  {accountFilter === null && <span>✓</span>}
-                </button>
-                {accounts.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => {
-                      setAccountFilter(a.id);
-                      setMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[var(--surface)] ${
-                      accountFilter === a.id ? "text-white" : "text-[var(--muted)]"
-                    }`}
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: a.color }}
-                    />
-                    <span className="flex-1 text-left truncate">
-                      @{a.handle ?? a.displayName ?? "account"}
-                    </span>
-                    {accountFilter === a.id && <span>✓</span>}
-                  </button>
-                ))}
-                <div className="border-t border-[var(--border)] mt-1">
-                  <Link
-                    href="/accounts"
-                    onClick={() => setMenuOpen(false)}
-                    className="block px-3 py-2.5 text-sm hover:bg-[var(--surface)]"
-                  >
-                    Manage accounts
-                  </Link>
-                  <button
-                    onClick={async () => {
-                      await fetch("/api/auth/logout", { method: "POST" });
-                      location.href = "/login";
-                    }}
-                    className="block w-full text-left px-3 py-2.5 text-sm text-red-400 hover:bg-[var(--surface)]"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Menu trigger — the panel itself drops down full-width below the
+              entire header (see further down). Keeping the button here so it
+              stays in the top-right corner. */}
+          <button
+            ref={menuButtonRef}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)]"
+            aria-label="Menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
         </div>
 
         <div className="px-4 pb-3 flex items-center gap-2">
@@ -348,6 +298,112 @@ export default function ThreadList() {
             </span>
             <span className="text-[var(--accent)]">Enable →</span>
           </button>
+        )}
+
+        {/* Full-width dropdown panel: drops down from below the entire
+            header, spans the whole sidebar column. Combines account
+            filtering + status filtering + account management. */}
+        {menuOpen && (
+          <div
+            ref={menuPanelRef}
+            className="absolute left-0 right-0 top-full bg-[var(--surface-2)] border-t border-b border-[var(--border)] shadow-2xl z-20 max-h-[70vh] overflow-y-auto"
+            style={{ animation: "sheet-down-rev 180ms ease-out" }}
+          >
+            <div className="px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
+              Filter accounts
+            </div>
+            <button
+              onClick={() => {
+                setAccountFilter(null);
+                setMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
+                accountFilter === null ? "text-white" : "text-[var(--muted)]"
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-white/40 shrink-0" />
+              <span className="flex-1 text-left">All accounts</span>
+              {accountFilter === null && <span>✓</span>}
+            </button>
+            {accounts.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => {
+                  setAccountFilter(a.id);
+                  setMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
+                  accountFilter === a.id ? "text-white" : "text-[var(--muted)]"
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: a.color }}
+                />
+                <span className="flex-1 text-left truncate">
+                  @{a.handle ?? a.displayName ?? "account"}
+                </span>
+                {accountFilter === a.id && <span>✓</span>}
+              </button>
+            ))}
+
+            <div className="border-t border-[var(--border)] mt-1 px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
+              Filter by status
+            </div>
+            <button
+              onClick={() => {
+                setStatusFilter(null);
+                setMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
+                statusFilter === null ? "text-white" : "text-[var(--muted)]"
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-white/40 shrink-0" />
+              <span className="flex-1 text-left">All statuses</span>
+              {statusFilter === null && <span>✓</span>}
+            </button>
+            {STATUS_ORDER.map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setStatusFilter(key);
+                  setMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
+                  statusFilter === key ? "text-white" : "text-[var(--muted)]"
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: STATUS_META[key].color }}
+                />
+                <span className="flex-1 text-left">
+                  {STATUS_META[key].label}
+                </span>
+                {statusFilter === key && <span>✓</span>}
+              </button>
+            ))}
+
+            <div className="border-t border-[var(--border)] mt-1">
+              <Link
+                href="/accounts"
+                onClick={() => setMenuOpen(false)}
+                className="block px-4 py-3 text-sm hover:bg-[var(--surface)]"
+              >
+                Manage accounts
+              </Link>
+              <button
+                onClick={async () => {
+                  await fetch("/api/auth/logout", { method: "POST" });
+                  location.href = "/login";
+                }}
+                className="block w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-[var(--surface)]"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
         )}
       </header>
 
