@@ -115,7 +115,7 @@ export default function ThreadList() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur border-b border-[var(--border)]">
+      <header className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur border-b border-[var(--border)] pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
           <h1 className="text-xl font-semibold flex-1">
             {view === "archive" ? "Archive" : "Inbox"}

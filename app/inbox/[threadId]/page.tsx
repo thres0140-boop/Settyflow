@@ -192,7 +192,7 @@ export default function ThreadPage() {
   return (
     <div className="flex-1 flex min-h-0">
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
-      <header className="border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur">
+      <header className="border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
           <Link
             href="/inbox"
@@ -352,7 +352,7 @@ export default function ThreadPage() {
         })}
       </div>
 
-      <div className="border-t border-[var(--border)]">
+      <div className="border-t border-[var(--border)] pb-safe">
         {replyTo && (
           <div className="px-3 pt-2 pb-1 flex items-start gap-2">
             <div className="flex-1 min-w-0 rounded-lg bg-[var(--surface)] border-l-2 border-[var(--accent)] px-3 py-2 text-xs">
