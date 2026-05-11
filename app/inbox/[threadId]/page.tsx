@@ -398,11 +398,7 @@ export default function ThreadPage() {
             e.preventDefault();
             send();
           }}
-          className="px-3 pt-3 flex gap-2"
-          style={{
-            // Keep tap targets above the home indicator.
-            paddingBottom: `max(0.75rem, env(safe-area-inset-bottom))`,
-          }}
+          className="px-3 pt-3 pb-3 flex gap-2"
         >
           <textarea
             ref={textareaRef}
