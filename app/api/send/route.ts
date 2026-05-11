@@ -42,17 +42,35 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Build the actual outgoing text. Unipile's quote_id doesn't render as a
+  // native quoted reply on Instagram (unlike WhatsApp/LinkedIn), so we prepend
+  // the quoted snippet inline as a fallback. Local UI still displays the
+  // proper quoted bubble using replyToSnippet metadata.
+  let outgoingText = String(text);
+  if (replyMeta && replyMeta.snippet) {
+    const author = replyMeta.fromMe
+      ? "you"
+      : (replyMeta.authorName ?? thread.leadName);
+    const quote = replyMeta.snippet
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    outgoingText = `↳ Replying to ${author}:\n${quote}\n\n${outgoingText}`;
+  }
+
   try {
     const result: any = await sendChatMessage(
       thread.chatId,
       thread.account.unipileAccountId,
-      String(text),
+      outgoingText,
       replyMeta?.unipileId ?? null,
     );
 
     const upId = extractMsgId(result);
     const now = new Date();
 
+    // Store ONLY the user's own text in our DB (not the prepended quote header)
+    // so the inbox UI renders cleanly with our native quote bubble.
     const msg = await prisma.message.create({
       data: {
         threadId: thread.id,

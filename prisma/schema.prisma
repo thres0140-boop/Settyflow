@@ -99,7 +99,11 @@ model VoiceClip {
   id          Int      @id @default(autoincrement())
   accountId   Int
   label       String
-  filename    String   // stored on disk under STORAGE_DIR/voice/<accountId>/
+  // `filename` doubles as the storage key (under voice/<accountId>/).
+  // In dev that maps to a local-disk path; in prod (Vercel) it maps to a Blob pathname.
+  filename    String
+  // For Vercel Blob: the public URL of the uploaded blob. Null when using local disk.
+  url         String?
   contentType String   @default("audio/mp4")
   sizeBytes   Int      @default(0)
   durationMs  Int?

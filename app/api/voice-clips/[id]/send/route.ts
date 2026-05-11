@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { readFileBytes, storagePath } from "@/lib/storage";
+import { readStored, buildVoiceKey } from "@/lib/storage";
 import { sendChatAttachment, extractMsgId, unipileConfigured } from "@/lib/unipile";
 import { emitRealtime } from "@/lib/realtime";
 
@@ -39,10 +39,12 @@ export async function POST(
 
   let bytes: Buffer;
   try {
-    bytes = await readFileBytes(
-      storagePath("voice", String(clip.accountId), clip.filename),
-    );
-  } catch {
+    bytes = await readStored({
+      key: buildVoiceKey(clip.accountId, clip.filename),
+      url: clip.url,
+    });
+  } catch (e) {
+    console.error("[voice send] read failed:", e);
     return NextResponse.json({ error: "file_missing_on_disk" }, { status: 500 });
   }
 

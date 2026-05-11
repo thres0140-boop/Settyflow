@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { writeFileFromBuffer } from "@/lib/storage";
+import { writeStored, buildVoiceKey } from "@/lib/storage";
 import { normalizeVoiceNote } from "@/lib/audio";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
       sizeBytes: true,
       durationMs: true,
       createdAt: true,
+      url: true,
     },
   });
   return NextResponse.json({ items });
@@ -46,8 +47,9 @@ export async function POST(req: NextRequest) {
 
   const rawBuf: Buffer = Buffer.from(await file.arrayBuffer());
 
-  // Re-encode to Instagram-compatible AAC m4a. If ffmpeg is missing, fall back
-  // to storing the original so at least the feature works (won't play on IG).
+  // Normalize to AAC m4a via ffmpeg. On Vercel ffmpeg isn't available, so this
+  // throws and we store the raw bytes. (Voice clip playback still works for
+  // anything already in m4a/AAC; other formats may not play on IG.)
   let storedBuf: Buffer = rawBuf;
   let ext = "m4a";
   let contentType = "audio/mp4";
@@ -62,15 +64,18 @@ export async function POST(req: NextRequest) {
   }
 
   const storedName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  await writeFileFromBuffer(["voice", String(accountId)], storedName, storedBuf);
+  const key = buildVoiceKey(accountId, storedName);
+
+  const stored = await writeStored({ key, bytes: storedBuf, contentType });
 
   const item = await prisma.voiceClip.create({
     data: {
       accountId,
       label: String(label).slice(0, 80),
       filename: storedName,
+      url: stored.url,
       contentType,
-      sizeBytes: storedBuf.length,
+      sizeBytes: stored.sizeBytes,
     },
   });
 

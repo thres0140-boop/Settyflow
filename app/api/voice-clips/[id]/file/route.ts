@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { readFileBytes, storagePath } from "@/lib/storage";
+import { readStored, buildVoiceKey } from "@/lib/storage";
 
-// Streams the raw audio bytes so the browser can <audio src=…> them.
+// In prod (Vercel Blob): redirect to the public blob URL.
+// In dev (local disk):   stream the bytes inline.
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -13,10 +14,16 @@ export async function GET(
   });
   if (!clip) return new NextResponse("not found", { status: 404 });
 
+  if (clip.url) {
+    // Vercel Blob — let the browser load it directly.
+    return NextResponse.redirect(clip.url, 302);
+  }
+
   try {
-    const bytes = await readFileBytes(
-      storagePath("voice", String(clip.accountId), clip.filename),
-    );
+    const bytes = await readStored({
+      key: buildVoiceKey(clip.accountId, clip.filename),
+      url: null,
+    });
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
         "Content-Type": clip.contentType || "audio/mp4",
