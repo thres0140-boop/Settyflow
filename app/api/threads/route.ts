@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   const accountId = sp.get("accountId");
   const status = sp.get("status");
   const archived = sp.get("archived") === "true";
+  const unanswered = sp.get("unanswered") === "true";
   const q = sp.get("q")?.toLowerCase();
   const take = Math.min(parseInt(sp.get("take") ?? "100"), 200);
 
@@ -16,6 +17,9 @@ export async function GET(req: NextRequest) {
       archived,
       ...(accountId ? { accountId: parseInt(accountId) } : {}),
       ...(status ? { status } : {}),
+      // "Unanswered" = the last message in the thread is from the lead,
+      // meaning we haven't replied yet.
+      ...(unanswered ? { lastMessageFromMe: false } : {}),
       ...(q
         ? {
             OR: [

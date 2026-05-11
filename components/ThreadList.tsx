@@ -59,6 +59,7 @@ export default function ThreadList() {
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [accountFilter, setAccountFilter] = useState<number | null>(null);
   const [view, setView] = useState<"inbox" | "archive">("inbox");
+  const [onlyUnanswered, setOnlyUnanswered] = useState(false);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [archivedCount, setArchivedCount] = useState(0);
@@ -70,6 +71,7 @@ export default function ThreadList() {
     if (accountFilter) params.set("accountId", String(accountFilter));
     if (q) params.set("q", q);
     if (view === "archive") params.set("archived", "true");
+    if (onlyUnanswered) params.set("unanswered", "true");
     const archivedParams = new URLSearchParams({ archived: "true", take: "1" });
     const [t, a, archCount] = await Promise.all([
       fetch(`/api/threads?${params}`).then((r) => r.json()),
@@ -126,7 +128,7 @@ export default function ThreadList() {
       offServer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountFilter, q, view]);
+  }, [accountFilter, q, view, onlyUnanswered]);
 
   // Push notification state — drives the "Enable notifications" banner below.
   const [pushState, setPushState] = useState<
@@ -276,13 +278,30 @@ export default function ThreadList() {
           </div>
         </div>
 
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 flex items-center gap-2">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search threads…"
-            className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-full px-4 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded-full px-4 py-2 text-sm outline-none focus:border-[var(--accent)]"
           />
+          <button
+            onClick={() => setOnlyUnanswered((v) => !v)}
+            title={onlyUnanswered ? "Showing unanswered only" : "Show only unanswered"}
+            className={`shrink-0 w-9 h-9 rounded-full border flex items-center justify-center text-sm transition-colors ${
+              onlyUnanswered
+                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
+                : "border-[var(--border)] text-[var(--muted)] hover:text-white"
+            }`}
+            aria-label="Toggle unanswered filter"
+            aria-pressed={onlyUnanswered}
+          >
+            {/* envelope-with-dot icon — represents unread/unanswered */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6h16v12H4z" />
+              <path d="M4 6l8 7 8-7" />
+            </svg>
+          </button>
         </div>
 
         {pushState === "needs_gesture" && (
