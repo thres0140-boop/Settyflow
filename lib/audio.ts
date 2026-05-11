@@ -3,9 +3,20 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 
-// Possible ffmpeg locations across macOS/Linux setups
+// Try the bundled platform-specific binary first (works on Vercel),
+// then fall back to system ffmpeg installs.
+let bundledFfmpegPath: string | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+  bundledFfmpegPath = ffmpegInstaller?.path ?? null;
+} catch {
+  /* package not installed for current platform */
+}
+
 const FFMPEG_CANDIDATES = [
   process.env.FFMPEG_PATH,
+  bundledFfmpegPath,
   "ffmpeg",
   "/opt/homebrew/bin/ffmpeg",
   "/usr/local/bin/ffmpeg",
