@@ -291,7 +291,7 @@ export default function ThreadPage() {
               }`}
             >
               {mine && (
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 text-xs text-[var(--muted)]">
+                <div className="hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity gap-1 text-xs text-[var(--muted)]">
                   <button
                     onClick={() => copyText(m.content)}
                     className="hover:text-white px-1.5 py-0.5 rounded hover:bg-[var(--surface)]"
@@ -309,7 +309,7 @@ export default function ThreadPage() {
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap ${
+                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words ${
                   mine
                     ? "bg-[var(--accent)] text-white"
                     : "bg-[var(--surface)] text-white border border-[var(--border)]"
@@ -342,7 +342,7 @@ export default function ThreadPage() {
                 </div>
               </div>
               {!mine && (
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 text-xs text-[var(--muted)]">
+                <div className="hidden md:flex opacity-0 group-hover:opacity-100 transition-opacity gap-1 text-xs text-[var(--muted)]">
                   <button
                     onClick={() => startReply(m)}
                     className="hover:text-white px-1.5 py-0.5 rounded hover:bg-[var(--surface)]"
