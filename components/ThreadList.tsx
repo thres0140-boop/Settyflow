@@ -326,7 +326,10 @@ export default function ThreadList() {
         )}
       </header>
 
-      <div className="overflow-y-auto">
+      <div
+        className="overflow-y-auto"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" }}
+      >
         {/* Archived row — only on inbox view, only if there's anything archived */}
         {view === "inbox" && archivedCount > 0 && (
           <button
@@ -426,7 +429,7 @@ export default function ThreadList() {
                   />
                   <p
                     className={`flex-1 text-sm truncate ${
-                      t.unreadCount > 0 && !t.lastMessageFromMe
+                      !t.lastMessageFromMe
                         ? "text-white"
                         : "text-[var(--muted)]"
                     }`}
