@@ -28,11 +28,14 @@ export async function GET(req: NextRequest) {
     console.log(`[callback] looking for ${accountId} in ${items.length} accounts; ids=${items.map((a: any) => a.id).join(",")}`);
     const acc = items.find((a) => a?.id === accountId);
     if (acc) {
+      // Only accept a real IG-style username as the handle. a.name is a
+      // display name and may contain spaces, separators, emoji.
+      const rawHandle = acc?.connection_params?.im?.username ?? null;
       handle =
-        acc?.connection_params?.im?.username ??
-        acc?.name ??
-        null;
-      displayName = acc?.name ?? handle;
+        typeof rawHandle === "string" && /^[A-Za-z0-9._]{1,30}$/.test(rawHandle)
+          ? rawHandle
+          : null;
+      displayName = acc?.name ?? null;
       profilePicUrl =
         acc?.connection_params?.im?.picture_url ??
         acc?.profile_picture_url ??

@@ -19,13 +19,25 @@ export function shortName(s: string): string {
   return s.split(/[|·•—–-]/)[0]?.trim() || s;
 }
 
-// Primary identifier for a coach account. Prefer the @handle; otherwise
-// use the trimmed displayName; otherwise the literal "account".
+// Real Instagram handles are 1-30 chars of alphanumeric / underscore / period.
+// We use this to detect when the `handle` column has been polluted with what
+// is actually a display name (happens when the import route picks up a.name
+// as a fallback).
+function looksLikeHandle(s: string): boolean {
+  return /^[A-Za-z0-9._]{1,30}$/.test(s);
+}
+
+// Primary identifier for a coach account. Prefer the @handle if it actually
+// looks like an Instagram handle; otherwise trim the displayName; otherwise
+// the literal "account". The looksLikeHandle check is what saves us when
+// the DB has e.g. handle = "Rowan van den Hurk | Online Transformatie Coach".
 export function accountLabel(a: {
   handle: string | null;
   displayName: string | null;
 }): string {
-  if (a.handle) return `@${a.handle}`;
-  if (a.displayName) return shortName(a.displayName);
+  if (a.handle && looksLikeHandle(a.handle)) return `@${a.handle}`;
+  // Either no handle, or "handle" is really a display name in disguise.
+  const dn = a.displayName ?? a.handle;
+  if (dn) return shortName(dn);
   return "account";
 }

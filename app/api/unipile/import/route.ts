@@ -15,12 +15,16 @@ export async function GET() {
   });
   const existingIds = new Set(existing.map((e) => e.unipileAccountId));
 
+  const HANDLE_RE = /^[A-Za-z0-9._]{1,30}$/;
+  const validHandle = (h: string | null) =>
+    typeof h === "string" && HANDLE_RE.test(h) ? h : null;
+
   const candidates = items
     .filter((a) => a.type === "INSTAGRAM")
     .filter((a) => !existingIds.has(a.id))
     .map((a) => ({
       unipileAccountId: a.id,
-      handle: a?.connection_params?.im?.username ?? a?.name ?? null,
+      handle: validHandle(a?.connection_params?.im?.username ?? null),
       displayName: a?.name ?? null,
       status: a?.sources?.[0]?.status ?? "active",
     }));
@@ -43,11 +47,17 @@ export async function POST() {
   let created = 0;
   let updated = 0;
 
+  const HANDLE_RE = /^[A-Za-z0-9._]{1,30}$/;
+  const validHandle = (h: string | null) =>
+    typeof h === "string" && HANDLE_RE.test(h) ? h : null;
+
   for (const a of items) {
     if (a.type !== "INSTAGRAM") continue;
 
-    const handle = a?.connection_params?.im?.username ?? a?.name ?? null;
-    const displayName = a?.name ?? handle;
+    // Only treat real IG-style usernames as a handle. a.name is the display
+    // name, which is allowed to contain spaces / pipes / emoji.
+    const handle = validHandle(a?.connection_params?.im?.username ?? null);
+    const displayName = a?.name ?? null;
     const status = a?.sources?.[0]?.status === "OK" ? "active" : "error";
 
     const existing = await prisma.account.findUnique({

@@ -10,18 +10,27 @@ import {
 
 // Extract handle / displayName / profile pic from a Unipile account record,
 // trying several known field paths since the shape varies by provider.
+//
+// Important: `a.name` is the display name, NOT the handle. We never use it
+// as a handle fallback — that's what produced "@Rowan van den Hurk | Online
+// Transformatie Coach" as a handle in the DB. Handle stays null if Unipile
+// doesn't surface a real username for this account.
 function extractAccountProfile(a: any): {
   handle: string | null;
   displayName: string | null;
   profilePicUrl: string | null;
 } {
-  const handle =
+  const rawHandle =
     a?.connection_params?.im?.username ??
     a?.connection_params?.username ??
     a?.username ??
-    a?.name ??
     null;
-  const displayName = a?.name ?? handle ?? null;
+  // Sanity: real IG handles are alphanumeric + underscore + period, 1-30 chars.
+  const handle =
+    typeof rawHandle === "string" && /^[A-Za-z0-9._]{1,30}$/.test(rawHandle)
+      ? rawHandle
+      : null;
+  const displayName = a?.name ?? null;
   const profilePicUrl =
     a?.connection_params?.im?.picture_url ??
     a?.profile_picture_url ??
@@ -59,8 +68,34 @@ export async function POST(req: NextRequest) {
     console.warn("[sync] listAccounts failed (continuing without profile heal):", e);
   }
 
+  // A handle that doesn't match the IG handle character set is almost
+  // certainly polluted with a display-name string. Treat it as null so it
+  // gets re-healed (or, failing that, fenced off from being shown as @handle).
+  const HANDLE_RE = /^[A-Za-z0-9._]{1,30}$/;
+  const validHandle = (h: string | null) =>
+    typeof h === "string" && HANDLE_RE.test(h) ? h : null;
+
   for (const acc of accounts) {
     try {
+      // Treat polluted handles ("Real Name | Tagline") as missing — sometimes
+      // they came in from an older import that fell back to a.name.
+      const cleanLocalHandle = validHandle(acc.handle);
+      if (acc.handle && !cleanLocalHandle && !acc.displayName) {
+        // Move the polluted handle into displayName before we clear it.
+        await prisma.account.update({
+          where: { id: acc.id },
+          data: { handle: null, displayName: acc.handle },
+        });
+        acc.displayName = acc.handle;
+        acc.handle = null;
+      } else if (acc.handle && !cleanLocalHandle) {
+        await prisma.account.update({
+          where: { id: acc.id },
+          data: { handle: null },
+        });
+        acc.handle = null;
+      }
+
       // Heal missing profile fields on the local row, if Unipile has them.
       if (!acc.handle || !acc.displayName || !acc.profilePicUrl) {
         const ua = unipileAccountIndex.get(acc.unipileAccountId);
