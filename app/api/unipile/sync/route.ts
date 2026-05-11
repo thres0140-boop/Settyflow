@@ -156,7 +156,8 @@ export async function POST(req: NextRequest) {
 
         try {
           const att = await getChatAttendees(chatId, acc.unipileAccountId);
-          const others = (att.items ?? []).filter((a: any) => !a.is_self);
+          const attendees = (att.items ?? []) as any[];
+          const others = attendees.filter((a: any) => !a.is_self);
           const lead = others[0];
           if (lead) {
             leadName = lead.name ?? leadName;
@@ -168,6 +169,41 @@ export async function POST(req: NextRequest) {
                 /instagram\.com\/([^/?#]+)/i,
               );
               if (m) leadHandle = m[1];
+            }
+          }
+
+          // Harvest the COACH's own profile picture + handle from the self
+          // attendee. Unipile's listAccounts often returns these as null,
+          // but every chat's attendees include the self party with the data
+          // we need. Update the account row opportunistically.
+          const selfAtt = attendees.find((a: any) => a.is_self);
+          if (selfAtt) {
+            const selfPic = selfAtt.picture_url ?? null;
+            let selfHandle: string | null = null;
+            if (selfAtt.profile_url) {
+              const m = String(selfAtt.profile_url).match(
+                /instagram\.com\/([^/?#]+)/i,
+              );
+              if (m && /^[A-Za-z0-9._]{1,30}$/.test(m[1])) selfHandle = m[1];
+            }
+            const wantPicUpdate = !acc.profilePicUrl && selfPic;
+            const wantHandleUpdate = !acc.handle && selfHandle;
+            const wantNameUpdate = !acc.displayName && selfAtt.name;
+            if (wantPicUpdate || wantHandleUpdate || wantNameUpdate) {
+              await prisma.account.update({
+                where: { id: acc.id },
+                data: {
+                  profilePicUrl: acc.profilePicUrl ?? selfPic,
+                  handle: acc.handle ?? selfHandle,
+                  displayName: acc.displayName ?? selfAtt.name ?? null,
+                },
+              });
+              acc.profilePicUrl = acc.profilePicUrl ?? selfPic;
+              acc.handle = acc.handle ?? selfHandle;
+              acc.displayName = acc.displayName ?? selfAtt.name ?? null;
+              console.log(
+                `[sync] self-attendee profile populated: account=${acc.id} handle=${acc.handle} pic=${acc.profilePicUrl ? "yes" : "no"}`,
+              );
             }
           }
         } catch (e) {
