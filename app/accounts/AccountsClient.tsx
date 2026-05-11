@@ -84,7 +84,7 @@ export default function AccountsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur border-b border-[var(--border)]">
+      <header className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur border-b border-[var(--border)] pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
           <Link href="/inbox" className="text-[var(--muted)] hover:text-white">
             ←
