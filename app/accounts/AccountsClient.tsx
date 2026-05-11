@@ -73,7 +73,15 @@ export default function AccountsPage() {
   }
 
   async function disconnect(id: number) {
-    if (!confirm("Disconnect this account? Threads and messages will be deleted.")) return;
+    const ok = confirm(
+      "Remove this account from Settyflow?\n\n" +
+        "• Its threads and message history in THIS app will be deleted.\n" +
+        "• The Unipile connection stays active (so any other app you use, " +
+        "e.g. ClientFlow, keeps working).\n\n" +
+        "If you want to fully disconnect the IG account, also delete it from " +
+        "the Unipile dashboard.",
+    );
+    if (!ok) return;
     await fetch("/api/accounts", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
