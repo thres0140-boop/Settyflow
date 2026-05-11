@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { accountLabel } from "@/lib/leadLabel";
 
 interface Props {
   handle: string | null;
@@ -8,15 +9,11 @@ interface Props {
   size?: number;
 }
 
-// Coach IG profiles often set their display name to "Real Name | Tagline"
-// (e.g. "Rowan van den Hurk | Online Transformatie Coach"). When we have to
-// fall back to the display name in the badge, trim everything after the
-// first separator so the chip stays readable.
-function shortName(s: string): string {
-  return s.split(/[|·•—–-]/)[0]?.trim() || s;
-}
-
 // Small profile pic + tag showing which coach account a thread belongs to.
+// All label logic goes through accountLabel() in lib/leadLabel.ts so the
+// badge can't drift from the rest of the app — including the "@handle"
+// validation that rejects polluted handle fields containing display-name
+// text like "Rowan van den Hurk | Online Transformatie Coach".
 export default function AccountBadge({
   handle,
   displayName,
@@ -24,7 +21,7 @@ export default function AccountBadge({
   color,
   size = 16,
 }: Props) {
-  const label = handle ? `@${handle}` : displayName ? shortName(displayName) : "Account";
+  const label = accountLabel({ handle, displayName });
   const initial = label.replace(/^@/, "").charAt(0).toUpperCase() || "?";
   return (
     <span
