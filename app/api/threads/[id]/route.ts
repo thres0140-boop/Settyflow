@@ -36,6 +36,8 @@ export async function GET(
           replyToSnippet: true,
           replyToFromMe: true,
           replyToAuthorName: true,
+          deliveredAt: true,
+          seenAt: true,
         },
       },
     },

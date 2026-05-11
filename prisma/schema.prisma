@@ -84,6 +84,9 @@ model Message {
   replyToAuthorName   String?
 
   attachments   String   @default("[]") // JSON array of urls/refs
+  // Read receipts from the lead's IG client (populated via Unipile webhooks).
+  deliveredAt   DateTime?
+  seenAt        DateTime?
   sentAt        DateTime @default(now())
   createdAt     DateTime @default(now())
 

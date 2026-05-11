@@ -19,6 +19,8 @@ interface Message {
   replyToSnippet: string | null;
   replyToFromMe: boolean | null;
   replyToAuthorName: string | null;
+  deliveredAt: string | null;
+  seenAt: string | null;
 }
 
 interface ReplyTarget {
@@ -332,14 +334,21 @@ export default function ThreadPage() {
                 )}
                 {m.content}
                 <div
-                  className={`text-[10px] mt-1 ${
+                  className={`text-[10px] mt-1 flex items-center gap-1 ${
                     mine ? "text-white/60" : "text-[var(--muted)]"
                   }`}
                 >
-                  {new Date(m.sentAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  <span>
+                    {new Date(m.sentAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {mine && (m.seenAt || m.deliveredAt) && (
+                    <span title={m.seenAt ? `Seen ${new Date(m.seenAt).toLocaleString()}` : "Delivered"}>
+                      · {m.seenAt ? "Seen" : "Delivered"}
+                    </span>
+                  )}
                 </div>
               </div>
               {!mine && (

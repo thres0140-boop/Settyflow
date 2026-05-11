@@ -49,21 +49,67 @@ export async function POST(req: NextRequest) {
     }
 
     const ev = event.toLowerCase();
-    const isMessage =
+    const isNewMessage =
       ev.includes("message") &&
       (ev.includes("created") ||
         ev.includes("received") ||
         ev === "messaging" ||
         ev === "new_message");
+    const isReadReceipt =
+      ev.includes("read") || ev.includes("seen");
+    const isDeliveredReceipt = ev.includes("deliver");
 
-    if (isMessage) {
+    if (isNewMessage) {
       await ingestMessage(account.id, accountId, body);
+    } else if (isReadReceipt) {
+      await applyReceipt(body, "seen");
+    } else if (isDeliveredReceipt) {
+      await applyReceipt(body, "delivered");
     }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[webhook] error:", err);
     return NextResponse.json({ ok: true });
+  }
+}
+
+// Read / delivered receipts from Unipile. Payload field names vary across
+// platforms — we look in several places for the affected message id(s).
+async function applyReceipt(body: any, kind: "seen" | "delivered") {
+  const msg = body.message ?? body.data ?? body;
+  const ids: string[] = [];
+  const single =
+    msg.id ??
+    msg.message_id ??
+    body.message_id ??
+    msg.target_message_id ??
+    body.target_message_id;
+  if (typeof single === "string") ids.push(single);
+  const multi = msg.message_ids ?? body.message_ids ?? msg.ids;
+  if (Array.isArray(multi)) for (const id of multi) if (typeof id === "string") ids.push(id);
+
+  if (ids.length === 0) {
+    console.warn(`[webhook] ${kind} event without message id(s)`);
+    return;
+  }
+
+  const tsRaw = msg.timestamp ?? body.timestamp ?? msg.read_at ?? msg.delivered_at;
+  const at = tsRaw ? new Date(tsRaw) : new Date();
+  const field = kind === "seen" ? "seenAt" : "deliveredAt";
+
+  await prisma.message.updateMany({
+    where: { unipileMsgId: { in: ids } },
+    data: { [field]: at } as any,
+  });
+
+  // Emit so open clients update instantly.
+  for (const upId of ids) {
+    const m = await prisma.message.findUnique({
+      where: { unipileMsgId: upId },
+      select: { threadId: true },
+    });
+    if (m) emitRealtime({ type: "thread.updated", threadId: m.threadId });
   }
 }
 
