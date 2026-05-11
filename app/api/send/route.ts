@@ -42,16 +42,24 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Send the user's text as-is; rely on Unipile's quote_id for the native
-  // Instagram quoted-reply UI. (We previously prepended an inline "Replying
-  // to…" prefix as a fallback — turned out to be ugly on IG.) If Unipile
-  // doesn't honor quote_id for IG the message still arrives, just without
-  // the native quote bubble.
+  // Unipile's quote_id is silently ignored on Instagram (Unipile limitation),
+  // so to give the lead any reply context we prepend a one-line preview of
+  // the quoted message. Format: ↳ "<snippet>" \n \n <user's reply>
+  let outgoingText = String(text);
+  if (replyMeta?.snippet) {
+    const snippet = replyMeta.snippet
+      .replace(/\s+/g, " ") // collapse newlines so it stays one line
+      .trim()
+      .slice(0, 80);
+    const suffix = replyMeta.snippet.trim().length > 80 ? "…" : "";
+    outgoingText = `↳ "${snippet}${suffix}"\n\n${outgoingText}`;
+  }
+
   try {
     const result: any = await sendChatMessage(
       thread.chatId,
       thread.account.unipileAccountId,
-      String(text),
+      outgoingText,
       replyMeta?.unipileId ?? null,
     );
 
