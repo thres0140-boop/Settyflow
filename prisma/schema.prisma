@@ -112,6 +112,18 @@ model VoiceClip {
   account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 }
 
+// Web Push subscription for browser/PWA push notifications.
+// One row per device that has accepted notifications.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastUsed  DateTime @default(now())
+}
+
 // Optional saved replies (templates) per account.
 model SavedReply {
   id        Int      @id @default(autoincrement())

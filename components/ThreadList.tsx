@@ -10,6 +10,7 @@ import {
   ensureNotificationPermission,
   notifyIfBackgrounded,
 } from "@/lib/notifications";
+import { registerPush } from "@/lib/push-client";
 
 interface ThreadRow {
   id: number;
@@ -118,6 +119,13 @@ export default function ThreadList() {
 
   useEffect(() => {
     ensureNotificationPermission();
+    // Register service worker + subscribe to web push (idempotent).
+    // Only meaningfully works on iOS when the site has been added to home screen.
+    registerPush().then((status) => {
+      if (status !== "ok" && status !== "skipped") {
+        console.log("[push] register status:", status);
+      }
+    });
   }, []);
 
   // Close the dropdown menu when clicking outside it

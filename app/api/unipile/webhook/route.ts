@@ -6,6 +6,7 @@ import {
   getChatAttendees,
   unipileConfigured,
 } from "@/lib/unipile";
+import { sendPushToAll } from "@/lib/push-server";
 
 // Unipile webhook for IG events. Always returns 200 so Unipile doesn't retry-storm.
 export async function POST(req: NextRequest) {
@@ -245,4 +246,17 @@ async function ingestMessage(
     accountHandle: acc?.handle ?? null,
     accountColor: acc?.color ?? "#6366f1",
   });
+
+  // Web push to every subscribed device — only for inbound messages.
+  if (!isOwn) {
+    const titleHandle = leadHandle ? ` (@${leadHandle})` : "";
+    const viaTag = acc?.handle ? `via @${acc.handle} · ` : "";
+    await sendPushToAll({
+      title: `${leadName}${titleHandle}`,
+      body: `${viaTag}${content.slice(0, 200)}`,
+      icon: leadProfilePic ?? "/icon-192.png",
+      url: `/inbox/${thread.id}`,
+      tag: `thread-${thread.id}`,
+    }).catch((e: unknown) => console.warn("[push] sendPushToAll failed:", e));
+  }
 }
