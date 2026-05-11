@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHostedAuthLink, unipileConfigured } from "@/lib/unipile";
+import { getAppUrl } from "@/lib/appUrl";
 
 // POST → returns a Unipile-hosted URL the user visits to connect an IG account
 export async function POST() {
@@ -10,8 +11,7 @@ export async function POST() {
     );
   }
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   try {
     const url = await createHostedAuthLink({

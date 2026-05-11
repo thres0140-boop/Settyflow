@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { listAccounts } from "@/lib/unipile";
+import { getAppUrl } from "@/lib/appUrl";
 
 // Unipile redirects users here after the hosted auth flow.
 // Query params: status, account_id, name
@@ -9,8 +10,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status");
   const accountId = searchParams.get("account_id");
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   if (status !== "success" || !accountId) {
     return NextResponse.redirect(`${appUrl}/accounts?connect=failed`);
