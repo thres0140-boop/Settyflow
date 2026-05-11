@@ -1,4 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#6366f1"/>
-  <text x="50%" y="50%" font-family="-apple-system, BlinkMacSystemFont, Helvetica, sans-serif" font-size="320" font-weight="700" fill="white" text-anchor="middle" dominant-baseline="central">S</text>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1e1b4b" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Squircle background card -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+
+  <!-- Three cascading chat bubbles — flowing diagonally from back to front,
+       representing many coach accounts merging into one unified inbox. -->
+  <g filter="url(#softShadow)">
+    <!-- Back bubble: amber -->
+    <g transform="translate(98 110)">
+      <rect width="200" height="120" rx="44" ry="44" fill="#fbbf24"/>
+      <path d="M 38 116 L 28 156 L 78 122 Z" fill="#fbbf24"/>
+    </g>
+
+    <!-- Middle bubble: rose -->
+    <g transform="translate(154 192)">
+      <rect width="230" height="130" rx="48" ry="48" fill="#f472b6"/>
+      <path d="M 46 128 L 36 172 L 92 132 Z" fill="#f472b6"/>
+    </g>
+
+    <!-- Front bubble: white — the unified inbox -->
+    <g transform="translate(108 296)">
+      <rect width="280" height="142" rx="54" ry="54" fill="white"/>
+      <path d="M 54 138 L 42 188 L 108 144 Z" fill="white"/>
+    </g>
+  </g>
 </svg>
