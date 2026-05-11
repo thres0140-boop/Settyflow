@@ -247,7 +247,7 @@ export default function ThreadList() {
         </div>
       </header>
 
-      <div className="divide-y divide-[var(--border)] overflow-y-auto pb-safe">
+      <div className="divide-y divide-[var(--border)] overflow-y-auto">
         {/* Archived row — only on inbox view, only if there's anything archived */}
         {view === "inbox" && archivedCount > 0 && (
           <button
