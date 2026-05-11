@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import ThreadInfoPanel from "@/components/ThreadInfoPanel";
 import { notifyThreadsChanged, onInsertText, onServerEvent } from "@/lib/events";
+import { getThreadCache, setThreadCache } from "@/lib/threadCache";
 
 interface Message {
   id: number;
@@ -55,7 +56,11 @@ export default function ThreadPage() {
   const params = useParams<{ threadId: string }>();
   const id = params.threadId;
 
-  const [thread, setThread] = useState<ThreadDetail | null>(null);
+  // Hydrate from cache immediately so the user never sees a "Loading…" flash
+  // when reopening a thread they've already visited this session.
+  const [thread, setThread] = useState<ThreadDetail | null>(() =>
+    getThreadCache<ThreadDetail>(Number(id)),
+  );
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +68,12 @@ export default function ThreadPage() {
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // When threadId changes (e.g. switching chats), swap to the new thread's
+  // cached data immediately to avoid showing the previous chat's content.
+  useEffect(() => {
+    setThread(getThreadCache<ThreadDetail>(Number(id)));
+  }, [id]);
 
   // Persist info-panel preference across thread switches
   useEffect(() => {
@@ -92,6 +103,7 @@ export default function ThreadPage() {
     if (!res.ok) return;
     const data = await res.json();
     setThread(data.thread);
+    if (data.thread) setThreadCache(Number(id), data.thread);
   }
 
   useEffect(() => {
