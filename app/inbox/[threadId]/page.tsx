@@ -364,7 +364,14 @@ export default function ThreadPage() {
         })}
       </div>
 
-      <div className="border-t border-[var(--border)] pb-safe">
+      <div
+        className="border-t border-[var(--border)] bg-[var(--background)]"
+        style={{
+          // Extend the input bar to the bottom edge of the screen, but keep
+          // the textarea + send button above the iOS home indicator by adding
+          // safe-area padding *inside* the form (see <form> below).
+        }}
+      >
         {replyTo && (
           <div className="px-3 pt-2 pb-1 flex items-start gap-2">
             <div className="flex-1 min-w-0 rounded-lg bg-[var(--surface)] border-l-2 border-[var(--accent)] px-3 py-2 text-xs">
@@ -391,7 +398,11 @@ export default function ThreadPage() {
             e.preventDefault();
             send();
           }}
-          className="p-3 flex gap-2"
+          className="px-3 pt-3 flex gap-2"
+          style={{
+            // Keep tap targets above the home indicator.
+            paddingBottom: `max(0.75rem, env(safe-area-inset-bottom))`,
+          }}
         >
           <textarea
             ref={textareaRef}
