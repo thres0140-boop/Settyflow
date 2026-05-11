@@ -1,6 +1,8 @@
 // Thin wrapper around Unipile REST API.
 // Docs: https://developer.unipile.com/
 
+import { recordSendTrace } from "@/lib/sendTrace";
+
 const dsn = () => (process.env.UNIPILE_DSN ?? "").trim();
 const key = () => (process.env.UNIPILE_API_KEY ?? "").trim();
 
@@ -145,7 +147,8 @@ export async function sendChatMessage(
     fd.append("quote_id", replyToUnipileMsgId);
   }
 
-  const res = await fetch(`${base()}/chats/${encodeURIComponent(chatId)}/messages`, {
+  const endpoint = `${base()}/chats/${encodeURIComponent(chatId)}/messages`;
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "X-API-KEY": key(), accept: "application/json" },
     body: fd,
@@ -161,25 +164,80 @@ export async function sendChatMessage(
 
   // If we sent with quote_id, re-fetch the message after a moment to see if
   // Unipile actually applied the quote — this confirms whether the issue is
-  // on our send or on their side.
+  // on our send or on their side. Also dump the full request + response into
+  // an in-memory buffer so /api/debug/last-send-trace can return literal
+  // evidence for support tickets.
+  let verifyTrace: {
+    url: string;
+    status: number;
+    ourSentMessage: { id: string | null; quoted: any; raw: any } | null;
+  } | undefined;
+
   if (replyToUnipileMsgId) {
     const sentId = json?.message_id ?? json?.id;
     if (sentId) {
       try {
         await new Promise((r) => setTimeout(r, 800));
-        const verify = await fetch(
-          `${base()}/chats/${encodeURIComponent(chatId)}/messages?account_id=${encodeURIComponent(accountId)}&limit=1`,
-          { headers: { "X-API-KEY": key(), accept: "application/json" }, cache: "no-store" },
-        );
+        const verifyUrl = `${base()}/chats/${encodeURIComponent(chatId)}/messages?account_id=${encodeURIComponent(accountId)}&limit=3`;
+        const verify = await fetch(verifyUrl, {
+          headers: { "X-API-KEY": key(), accept: "application/json" },
+          cache: "no-store",
+        });
         const verifyJson: any = await verify.json().catch(() => ({}));
-        const newest = verifyJson?.items?.[0];
+        const items: any[] = verifyJson?.items ?? [];
+        const ours =
+          items.find((m) => m?.id === sentId || m?.message_id === sentId) ??
+          items[0] ??
+          null;
         console.log(
-          `[send] verify newest id=${newest?.id} quoted=${newest?.quoted ? "YES " + JSON.stringify(newest.quoted).slice(0, 200) : "NO"}`,
+          `[send] verify newest id=${ours?.id} quoted=${ours?.quoted ? "YES " + JSON.stringify(ours.quoted).slice(0, 200) : "NO"}`,
         );
+        verifyTrace = {
+          url: verifyUrl,
+          status: verify.status,
+          ourSentMessage: ours
+            ? {
+                id: ours?.id ?? ours?.message_id ?? null,
+                quoted: ours?.quoted ?? null,
+                raw: ours,
+              }
+            : null,
+        };
       } catch (e) {
         console.warn("[send] verify failed:", e);
       }
     }
+
+    // Build a paste-ready cURL exactly matching what we sent.
+    const curl = [
+      `curl -X POST '${endpoint}'`,
+      `  -H 'X-API-KEY: <redacted>'`,
+      `  -H 'accept: application/json'`,
+      `  -F 'text=${text.replace(/'/g, "'\\''")}'`,
+      `  -F 'account_id=${accountId}'`,
+      `  -F 'quote_id=${replyToUnipileMsgId}'`,
+    ].join(" \\\n");
+
+    recordSendTrace({
+      capturedAt: new Date().toISOString(),
+      request: {
+        method: "POST",
+        url: endpoint,
+        headers: {
+          "X-API-KEY": "<redacted>",
+          accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
+        multipartFields: {
+          text,
+          account_id: accountId,
+          quote_id: replyToUnipileMsgId,
+        },
+        curl,
+      },
+      response: { status: res.status, body: json },
+      verifyFetch: verifyTrace,
+    });
   }
 
   return json;
