@@ -3,7 +3,7 @@ export const STATUS_META: Record<
   { label: string; color: string }
 > = {
   new: { label: "New", color: "#6366f1" },         // indigo
-  qualified: { label: "Qualified", color: "#f59e0b" }, // amber
+  qualified: { label: "Link Sent", color: "#f59e0b" }, // amber (key kept as "qualified" for DB compatibility)
   call_booked: { label: "Call Booked", color: "#10b981" }, // green
   closed: { label: "Closed", color: "#ef4444" },   // red
 };

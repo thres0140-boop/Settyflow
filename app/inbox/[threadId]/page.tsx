@@ -55,7 +55,7 @@ interface ThreadDetail {
 
 const STATUSES = [
   { key: "new", label: "New" },
-  { key: "qualified", label: "Qualified" },
+  { key: "qualified", label: "Link Sent" },
   { key: "call_booked", label: "Call Booked" },
   { key: "closed", label: "Closed" },
 ];
