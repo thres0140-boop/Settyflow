@@ -12,10 +12,7 @@ export default function InboxLayout({
   const onThreadPage = /\/inbox\/\d+/.test(pathname);
 
   return (
-    // h-dvh = dynamic viewport height. On iOS, when the keyboard opens,
-    // dvh shrinks to the visible area — so the chat layout (header + messages
-    // + input) compresses with it instead of being shoved off-screen.
-    <div className="h-dvh flex">
+    <div className="h-screen flex">
       <aside
         className={`${
           onThreadPage ? "hidden md:flex" : "flex"
