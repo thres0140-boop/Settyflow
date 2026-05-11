@@ -318,7 +318,7 @@ export default function ThreadList() {
         )}
       </header>
 
-      <div className="divide-y divide-[var(--border)] overflow-y-auto">
+      <div className="overflow-y-auto">
         {/* Archived row — only on inbox view, only if there's anything archived */}
         {view === "inbox" && archivedCount > 0 && (
           <button
@@ -367,7 +367,7 @@ export default function ThreadList() {
             <Link
               key={t.id}
               href={`/inbox/${t.id}`}
-              className={`flex items-start gap-3 px-4 py-3 border-r-2 ${
+              className={`flex items-start gap-3 px-4 py-3 border-l-2 ${
                 isActive
                   ? "bg-[var(--surface-2)] border-[var(--accent)]"
                   : "border-transparent hover:bg-[var(--surface)]"
