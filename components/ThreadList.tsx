@@ -69,8 +69,19 @@ export default function ThreadList() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuClosing, setMenuClosing] = useState(false);
   const menuPanelRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Animated dismiss so the mobile bottom sheet slides down before unmounting.
+  function closeMenu() {
+    if (!menuOpen) return;
+    setMenuClosing(true);
+    setTimeout(() => {
+      setMenuOpen(false);
+      setMenuClosing(false);
+    }, 220);
+  }
 
   const threads = view === "archive" ? archivedThreads : inboxThreads;
   const archivedCount = archivedThreads.length;
@@ -200,7 +211,8 @@ export default function ThreadList() {
 
   // Close the dropdown menu when clicking outside the panel AND outside the
   // toggle button (otherwise outside-click would race the button's own
-  // toggle and the menu would never open).
+  // toggle and the menu would never open). Only applied to the desktop
+  // dropdown — the mobile bottom sheet has its own scrim that handles close.
   useEffect(() => {
     if (!menuOpen) return;
     function onDocClick(e: MouseEvent) {
@@ -208,14 +220,118 @@ export default function ThreadList() {
       const insidePanel = menuPanelRef.current?.contains(t);
       const insideButton = menuButtonRef.current?.contains(t);
       if (!insidePanel && !insideButton) {
-        setMenuOpen(false);
+        closeMenu();
       }
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuOpen]);
 
   const activeAccount = accounts.find((a) => a.id === accountFilter) ?? null;
+
+  // Shared menu content rendered in both the desktop dropdown and the
+  // mobile bottom sheet. All actions call closeMenu() for animated dismissal.
+  function renderMenuContents() {
+    return (
+      <>
+        <div className="px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
+          Filter accounts
+        </div>
+        <button
+          onClick={() => {
+            setAccountFilter(null);
+            closeMenu();
+          }}
+          className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
+            accountFilter === null ? "text-white" : "text-[var(--muted)]"
+          }`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-white/40 shrink-0" />
+          <span className="flex-1 text-left">All accounts</span>
+          {accountFilter === null && <span>✓</span>}
+        </button>
+        {accounts.map((a) => (
+          <button
+            key={a.id}
+            onClick={() => {
+              setAccountFilter(a.id);
+              closeMenu();
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
+              accountFilter === a.id ? "text-white" : "text-[var(--muted)]"
+            }`}
+          >
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: a.color }}
+            />
+            <span className="flex-1 text-left truncate">
+              @{a.handle ?? a.displayName ?? "account"}
+            </span>
+            {accountFilter === a.id && <span>✓</span>}
+          </button>
+        ))}
+
+        <div className="border-t border-[var(--border)] mt-1 px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
+          Filter by status
+        </div>
+        <button
+          onClick={() => {
+            setStatusFilter(null);
+            closeMenu();
+          }}
+          className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
+            statusFilter === null ? "text-white" : "text-[var(--muted)]"
+          }`}
+        >
+          <span className="w-2.5 h-2.5 rounded-full bg-white/40 shrink-0" />
+          <span className="flex-1 text-left">All statuses</span>
+          {statusFilter === null && <span>✓</span>}
+        </button>
+        {STATUS_ORDER.map((key) => (
+          <button
+            key={key}
+            onClick={() => {
+              setStatusFilter(key);
+              closeMenu();
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--surface)] ${
+              statusFilter === key ? "text-white" : "text-[var(--muted)]"
+            }`}
+          >
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: STATUS_META[key].color }}
+            />
+            <span className="flex-1 text-left">
+              {STATUS_META[key].label}
+            </span>
+            {statusFilter === key && <span>✓</span>}
+          </button>
+        ))}
+
+        <div className="border-t border-[var(--border)] mt-1">
+          <Link
+            href="/accounts"
+            onClick={closeMenu}
+            className="block px-4 py-3 text-sm hover:bg-[var(--surface)]"
+          >
+            Manage accounts
+          </Link>
+          <button
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" });
+              location.href = "/login";
+            }}
+            className="block w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-[var(--surface)]"
+          >
+            Sign out
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -249,7 +365,7 @@ export default function ThreadList() {
               stays in the top-right corner. */}
           <button
             ref={menuButtonRef}
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
             className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)]"
             aria-label="Menu"
           >
@@ -300,112 +416,63 @@ export default function ThreadList() {
           </button>
         )}
 
-        {/* Full-width dropdown panel: drops down from below the entire
-            header, spans the whole sidebar column. Combines account
-            filtering + status filtering + account management. */}
+        {/* Desktop: full-width dropdown anchored to the header */}
         {menuOpen && (
           <div
             ref={menuPanelRef}
-            className="absolute left-0 right-0 top-full bg-[var(--surface-2)] border-t border-b border-[var(--border)] shadow-2xl z-20 max-h-[70vh] overflow-y-auto"
+            className="hidden md:block absolute left-0 right-0 top-full bg-[var(--surface-2)] border-t border-b border-[var(--border)] shadow-2xl z-20 max-h-[70vh] overflow-y-auto"
             style={{ animation: "sheet-down-rev 180ms ease-out" }}
           >
-            <div className="px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
-              Filter accounts
-            </div>
-            <button
-              onClick={() => {
-                setAccountFilter(null);
-                setMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
-                accountFilter === null ? "text-white" : "text-[var(--muted)]"
-              }`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-white/40 shrink-0" />
-              <span className="flex-1 text-left">All accounts</span>
-              {accountFilter === null && <span>✓</span>}
-            </button>
-            {accounts.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => {
-                  setAccountFilter(a.id);
-                  setMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
-                  accountFilter === a.id ? "text-white" : "text-[var(--muted)]"
-                }`}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: a.color }}
-                />
-                <span className="flex-1 text-left truncate">
-                  @{a.handle ?? a.displayName ?? "account"}
-                </span>
-                {accountFilter === a.id && <span>✓</span>}
-              </button>
-            ))}
-
-            <div className="border-t border-[var(--border)] mt-1 px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--muted)]">
-              Filter by status
-            </div>
-            <button
-              onClick={() => {
-                setStatusFilter(null);
-                setMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
-                statusFilter === null ? "text-white" : "text-[var(--muted)]"
-              }`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-white/40 shrink-0" />
-              <span className="flex-1 text-left">All statuses</span>
-              {statusFilter === null && <span>✓</span>}
-            </button>
-            {STATUS_ORDER.map((key) => (
-              <button
-                key={key}
-                onClick={() => {
-                  setStatusFilter(key);
-                  setMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--surface)] ${
-                  statusFilter === key ? "text-white" : "text-[var(--muted)]"
-                }`}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: STATUS_META[key].color }}
-                />
-                <span className="flex-1 text-left">
-                  {STATUS_META[key].label}
-                </span>
-                {statusFilter === key && <span>✓</span>}
-              </button>
-            ))}
-
-            <div className="border-t border-[var(--border)] mt-1">
-              <Link
-                href="/accounts"
-                onClick={() => setMenuOpen(false)}
-                className="block px-4 py-3 text-sm hover:bg-[var(--surface)]"
-              >
-                Manage accounts
-              </Link>
-              <button
-                onClick={async () => {
-                  await fetch("/api/auth/logout", { method: "POST" });
-                  location.href = "/login";
-                }}
-                className="block w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-[var(--surface)]"
-              >
-                Sign out
-              </button>
-            </div>
+            {renderMenuContents()}
           </div>
         )}
       </header>
+
+      {/* Mobile: bottom-sheet variant — slides up from the bottom with a
+          scrim, matching the thread-info sheet on the chat page. */}
+      {menuOpen && (
+        <div className="md:hidden fixed inset-0 z-30 flex flex-col">
+          <button
+            aria-label="Close menu"
+            onClick={closeMenu}
+            className="flex-1 backdrop-blur-sm"
+            style={{
+              background: "rgba(0,0,0,0.6)",
+              animation: menuClosing
+                ? "scrim-fade-out 220ms ease forwards"
+                : "scrim-fade-in 220ms ease forwards",
+            }}
+          />
+          <div
+            className="bg-[var(--background)] rounded-t-2xl shadow-2xl border-t border-[var(--border)] overflow-hidden flex flex-col"
+            style={{
+              maxHeight: "85dvh",
+              animation: menuClosing
+                ? "sheet-down 220ms cubic-bezier(0.32, 0.72, 0, 1) forwards"
+                : "sheet-up 220ms cubic-bezier(0.32, 0.72, 0, 1)",
+            }}
+          >
+            <div className="flex items-center justify-center py-2 relative shrink-0">
+              <span className="w-9 h-1 rounded-full bg-[var(--border)]" />
+              <button
+                onClick={closeMenu}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-[var(--muted)] hover:text-white hover:bg-[var(--surface)] text-base"
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className="flex-1 overflow-y-auto"
+              style={{
+                paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)",
+              }}
+            >
+              {renderMenuContents()}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         className="overflow-y-auto"
