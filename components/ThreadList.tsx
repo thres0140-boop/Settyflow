@@ -84,6 +84,20 @@ export default function ThreadList() {
     setAccounts(a.accounts ?? []);
     setArchivedCount(archCount);
     setLoading(false);
+
+    // Keep the iOS app icon badge in sync with total unread.
+    if (typeof navigator !== "undefined" && "setAppBadge" in navigator) {
+      const total = (t.threads ?? []).reduce(
+        (sum: number, x: ThreadRow) => sum + (x.unreadCount || 0),
+        0,
+      );
+      const nav = navigator as Navigator & {
+        setAppBadge?: (n: number) => Promise<void>;
+        clearAppBadge?: () => Promise<void>;
+      };
+      if (total > 0) nav.setAppBadge?.(total).catch(() => {});
+      else nav.clearAppBadge?.().catch(() => {});
+    }
   }
 
   useEffect(() => {

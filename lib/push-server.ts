@@ -26,8 +26,15 @@ export async function sendPushToAll(payload: {
     return;
   }
 
+  // Total unread across all threads — drives the iOS app icon badge count.
+  const agg = await prisma.thread.aggregate({
+    _sum: { unreadCount: true },
+    where: { archived: false },
+  });
+  const unreadCount = agg._sum.unreadCount ?? 0;
+
   const subs = await prisma.pushSubscription.findMany();
-  const data = JSON.stringify(payload);
+  const data = JSON.stringify({ ...payload, unreadCount });
 
   await Promise.all(
     subs.map(async (s) => {

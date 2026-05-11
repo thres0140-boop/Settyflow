@@ -28,7 +28,18 @@ self.addEventListener("push", (event) => {
     data: { url: data.url || "/inbox" },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  const tasks = [self.registration.showNotification(title, options)];
+
+  // iOS app icon badge — number on the home-screen icon.
+  if (typeof data.unreadCount === "number" && self.navigator && self.navigator.setAppBadge) {
+    if (data.unreadCount > 0) {
+      tasks.push(self.navigator.setAppBadge(data.unreadCount).catch(() => {}));
+    } else if (self.navigator.clearAppBadge) {
+      tasks.push(self.navigator.clearAppBadge().catch(() => {}));
+    }
+  }
+
+  event.waitUntil(Promise.all(tasks));
 });
 
 self.addEventListener("notificationclick", (event) => {
