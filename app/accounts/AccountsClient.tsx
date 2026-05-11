@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -69,6 +69,31 @@ export default function AccountsPage() {
       load();
     } else {
       alert(`Import failed: ${data.error ?? "unknown"}`);
+    }
+  }
+
+  // Per-account hidden file input refs so we can wire one "Edit pic" button
+  // per row to its own native picker.
+  const fileInputs = useRef<Record<number, HTMLInputElement | null>>({});
+  const [uploadingPic, setUploadingPic] = useState<number | null>(null);
+
+  async function uploadAvatar(id: number, file: File) {
+    setUploadingPic(id);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/accounts/${id}/avatar`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`Upload failed: ${data.error ?? "unknown"}`);
+      } else {
+        await load();
+      }
+    } finally {
+      setUploadingPic(null);
     }
   }
 
@@ -160,21 +185,46 @@ export default function AccountsPage() {
             key={a.id}
             className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3"
           >
-            {a.profilePicUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={a.profilePicUrl}
-                alt=""
-                className="w-12 h-12 rounded-full object-cover"
+            <button
+              type="button"
+              onClick={() => fileInputs.current[a.id]?.click()}
+              className="relative group shrink-0"
+              title="Upload profile picture for this coach"
+              disabled={uploadingPic === a.id}
+            >
+              {a.profilePicUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={a.profilePicUrl}
+                  alt=""
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium"
+                  style={{ backgroundColor: a.color }}
+                >
+                  {(a.handle ?? a.displayName ?? "?").charAt(0).toUpperCase()}
+                </div>
+              )}
+              {/* Hover/click overlay — tap target to change the pic */}
+              <span className="absolute inset-0 rounded-full bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-medium">
+                {uploadingPic === a.id ? "…" : "Edit"}
+              </span>
+              <input
+                ref={(el) => {
+                  fileInputs.current[a.id] = el;
+                }}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadAvatar(a.id, f);
+                  e.target.value = ""; // allow re-selecting the same file
+                }}
               />
-            ) : (
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium"
-                style={{ backgroundColor: a.color }}
-              >
-                {(a.handle ?? a.displayName ?? "?").charAt(0).toUpperCase()}
-              </div>
-            )}
+            </button>
             <div className="flex-1 min-w-0">
               <div className="font-medium truncate">
                 {a.handle ? `@${a.handle}` : a.displayName ?? "Unknown account"}
