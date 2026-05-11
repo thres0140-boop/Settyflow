@@ -96,8 +96,9 @@ export default function ThreadPage() {
 
   useEffect(() => {
     load();
-    // Safety-net poll (every 20s) in case SSE drops.
-    const t = setInterval(load, 20000);
+    // Poll every 3s for the open thread (cheap query, single thread).
+    // SSE doesn't work cross-instance on Vercel serverless yet.
+    const t = setInterval(load, 3000);
     const off = onServerEvent((e) => {
       const evtThreadId =
         e.type === "message.created" || e.type === "thread.updated"

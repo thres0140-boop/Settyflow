@@ -80,8 +80,9 @@ export default function ThreadList() {
 
   useEffect(() => {
     load();
-    // Polling as safety net in case SSE drops.
-    const id = setInterval(load, 30000);
+    // Poll every 5s. (SSE works in dev but not Vercel serverless across function
+    // instances — see lib/realtime.ts. Real fix is Pusher/Ably; until then, fast polling.)
+    const id = setInterval(load, 5000);
     const offChange = onThreadsChanged(load);
     const offServer = onServerEvent((e) => {
       if (e.type === "message.created" || e.type === "thread.updated") {
