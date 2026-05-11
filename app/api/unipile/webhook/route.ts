@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { emitRealtime } from "@/lib/realtime";
+import {
+  getChatMessages,
+  getChatAttendees,
+  unipileConfigured,
+} from "@/lib/unipile";
 
 // Unipile webhook for IG events. Always returns 200 so Unipile doesn't retry-storm.
 export async function POST(req: NextRequest) {
@@ -18,11 +23,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+
+    // Log the FULL payload — visible in Vercel function logs. Critical for
+    // figuring out unknown Unipile field shapes when something doesn't ingest right.
+    console.log("[webhook] payload:", JSON.stringify(body));
+
     const event: string = body.event ?? body.type ?? "";
     const accountId: string | undefined =
-      body.account_id ?? body.data?.account_id;
+      body.account_id ??
+      body.data?.account_id ??
+      body.message?.account_id;
 
-    if (!accountId) return NextResponse.json({ ok: true });
+    if (!accountId) {
+      console.warn("[webhook] no account_id in payload");
+      return NextResponse.json({ ok: true });
+    }
 
     const account = await prisma.account.findUnique({
       where: { unipileAccountId: accountId },
@@ -37,10 +52,11 @@ export async function POST(req: NextRequest) {
       ev.includes("message") &&
       (ev.includes("created") ||
         ev.includes("received") ||
-        ev === "messaging");
+        ev === "messaging" ||
+        ev === "new_message");
 
     if (isMessage) {
-      await ingestMessage(account.id, body);
+      await ingestMessage(account.id, accountId, body);
     }
 
     return NextResponse.json({ ok: true });
@@ -50,38 +66,114 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function ingestMessage(accountId: number, body: any) {
-  const msg = body.data ?? body;
-  const chatId: string | undefined = msg.chat_id ?? body.chat_id ?? msg.chatId;
-  if (!chatId) return;
+async function ingestMessage(
+  accountId: number,
+  unipileAccountId: string,
+  body: any,
+) {
+  // Unipile's payload shape varies — flatten it as much as possible.
+  // Try top-level, body.data, and body.message.
+  const msg = body.message ?? body.data ?? body;
 
-  const isOwn: boolean = msg.is_sender ?? msg.is_from_me ?? false;
+  const chatId: string | undefined =
+    msg.chat_id ?? body.chat_id ?? msg.chatId ?? body.chatId;
+  if (!chatId) {
+    console.warn("[webhook] no chat_id in payload");
+    return;
+  }
+
+  const isOwn: boolean = Boolean(
+    msg.is_sender ?? msg.is_from_me ?? body.is_sender ?? false,
+  );
   const direction: "in" | "out" = isOwn ? "out" : "in";
 
-  const attendee = body.attendees?.[0] ?? body.sender ?? {};
-  const leadName: string =
+  // Extract from payload first
+  const attendee = body.sender ?? body.attendees?.[0] ?? msg.sender ?? {};
+  let leadName: string =
     msg.sender_name ??
     msg.from_name ??
+    attendee.attendee_name ??
     attendee.display_name ??
     attendee.name ??
     attendee.username ??
-    "Instagram User";
-  const leadHandle: string | null =
+    body.attendee_name ??
+    "";
+  let leadHandle: string | null =
     msg.sender_username ??
     msg.from_username ??
     attendee.username ??
     attendee.handle ??
     null;
-  const leadProfilePic: string | null =
-    attendee.profile_picture_url ?? attendee.picture_url ?? null;
-  const leadProviderId: string | null =
-    attendee.provider_id ?? attendee.id ?? null;
+  let leadProfilePic: string | null =
+    attendee.profile_picture_url ??
+    attendee.picture_url ??
+    attendee.attendee_picture_url ??
+    null;
+  let leadProviderId: string | null =
+    attendee.provider_id ??
+    attendee.attendee_provider_id ??
+    attendee.id ??
+    body.attendee_provider_id ??
+    null;
 
-  const content: string = msg.text ?? msg.body ?? msg.content ?? "";
-  const unipileMsgId: string | null = msg.id ?? msg.message_id ?? null;
+  let content: string =
+    msg.text ??
+    msg.body ??
+    msg.content ??
+    msg.message ??
+    body.text ??
+    body.message_text ??
+    "";
+  const unipileMsgId: string | null =
+    msg.id ?? msg.message_id ?? body.message_id ?? null;
   const sentAtRaw: string | number | undefined =
-    msg.timestamp ?? msg.created_at ?? msg.sent_at;
+    msg.timestamp ?? msg.created_at ?? msg.sent_at ?? body.timestamp;
   const sentAt = sentAtRaw ? new Date(sentAtRaw) : new Date();
+
+  // FALLBACK: if either content or lead identity is missing, refetch from Unipile.
+  // Webhook payloads are inconsistent across event types — the API is the source of truth.
+  const needsRefetch =
+    unipileConfigured() &&
+    (!content || !leadName || (!leadHandle && !leadProviderId));
+
+  if (needsRefetch) {
+    console.log(
+      `[webhook] sparse payload, refetching chat ${chatId} from Unipile`,
+    );
+    try {
+      // Newest message
+      const msgs: any = await getChatMessages(chatId, unipileAccountId, 5);
+      const items = (msgs.items ?? msgs.messages ?? []) as any[];
+      const target = unipileMsgId
+        ? items.find((m: any) => m.id === unipileMsgId) ?? items[0]
+        : items[0];
+      if (target?.text && !content) content = String(target.text);
+    } catch (e) {
+      console.warn(`[webhook] refetch messages failed:`, e);
+    }
+
+    try {
+      const att: any = await getChatAttendees(chatId, unipileAccountId);
+      const others = (att.items ?? []).filter((a: any) => !a.is_self);
+      const lead = others[0];
+      if (lead) {
+        if (!leadName || leadName === "")
+          leadName = lead.name ?? leadName ?? "Instagram User";
+        leadProfilePic = leadProfilePic ?? lead.picture_url ?? null;
+        leadProviderId = leadProviderId ?? lead.provider_id ?? null;
+        if (!leadHandle && lead.profile_url) {
+          const m = String(lead.profile_url).match(
+            /instagram\.com\/([^/?#]+)/i,
+          );
+          if (m) leadHandle = m[1];
+        }
+      }
+    } catch (e) {
+      console.warn(`[webhook] refetch attendees failed:`, e);
+    }
+  }
+
+  if (!leadName) leadName = "Instagram User";
 
   // Look up first so we can suppress unread bumps on archived threads.
   const existing = await prisma.thread.findUnique({
@@ -104,7 +196,8 @@ async function ingestMessage(accountId: number, body: any) {
       unreadCount: isOwn ? 0 : 1,
     },
     update: {
-      leadName,
+      // Only overwrite name fields if we actually got something.
+      leadName: leadName !== "Instagram User" ? leadName : undefined,
       leadHandle: leadHandle ?? undefined,
       leadProfilePic: leadProfilePic ?? undefined,
       lastMessageAt: sentAt,
@@ -116,10 +209,10 @@ async function ingestMessage(accountId: number, body: any) {
 
   // Dedup on unipileMsgId when available
   if (unipileMsgId) {
-    const existing = await prisma.message.findUnique({
+    const dup = await prisma.message.findUnique({
       where: { unipileMsgId },
     });
-    if (existing) return;
+    if (dup) return;
   }
 
   await prisma.message.create({
@@ -136,7 +229,7 @@ async function ingestMessage(accountId: number, body: any) {
   });
 
   // Push realtime update to all connected clients.
-  const account = await prisma.account.findUnique({
+  const acc = await prisma.account.findUnique({
     where: { id: accountId },
     select: { handle: true, color: true },
   });
@@ -149,7 +242,7 @@ async function ingestMessage(accountId: number, body: any) {
     leadName,
     leadHandle,
     leadProfilePic,
-    accountHandle: account?.handle ?? null,
-    accountColor: account?.color ?? "#6366f1",
+    accountHandle: acc?.handle ?? null,
+    accountColor: acc?.color ?? "#6366f1",
   });
 }
