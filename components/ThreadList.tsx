@@ -55,41 +55,49 @@ export default function ThreadList() {
   const activeMatch = pathname.match(/\/inbox\/(\d+)/);
   const activeId = activeMatch ? parseInt(activeMatch[1]) : null;
 
-  const [threads, setThreads] = useState<ThreadRow[]>([]);
+  // We keep BOTH inbox and archive lists pre-loaded in state so toggling
+  // between them is instant — no fetch wait, no flash of stale data.
+  const [inboxThreads, setInboxThreads] = useState<ThreadRow[]>([]);
+  const [archivedThreads, setArchivedThreads] = useState<ThreadRow[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [accountFilter, setAccountFilter] = useState<number | null>(null);
   const [view, setView] = useState<"inbox" | "archive">("inbox");
   const [onlyUnanswered, setOnlyUnanswered] = useState(false);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  const [archivedCount, setArchivedCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const threads = view === "archive" ? archivedThreads : inboxThreads;
+  const archivedCount = archivedThreads.length;
+
   async function load() {
-    const params = new URLSearchParams();
-    if (accountFilter) params.set("accountId", String(accountFilter));
-    if (q) params.set("q", q);
-    if (view === "archive") params.set("archived", "true");
-    if (onlyUnanswered) params.set("unanswered", "true");
-    const archivedParams = new URLSearchParams({ archived: "true", take: "1" });
-    const [t, a, archCount] = await Promise.all([
-      fetch(`/api/threads?${params}`).then((r) => r.json()),
+    // Build shared filter params (apply consistently to inbox + archive)
+    function buildParams(archived: boolean) {
+      const params = new URLSearchParams();
+      if (accountFilter) params.set("accountId", String(accountFilter));
+      if (q) params.set("q", q);
+      if (onlyUnanswered) params.set("unanswered", "true");
+      if (archived) params.set("archived", "true");
+      params.set("take", "200");
+      return params;
+    }
+
+    const [inboxRes, archRes, a] = await Promise.all([
+      fetch(`/api/threads?${buildParams(false)}`).then((r) => r.json()),
+      fetch(`/api/threads?${buildParams(true)}`).then((r) => r.json()),
       fetch("/api/accounts").then((r) => r.json()),
-      // Lightweight count of archived threads (just length of returned array, capped)
-      fetch(`/api/threads?archived=true&take=200`)
-        .then((r) => r.json())
-        .then((d) => (d.threads ?? []).length)
-        .catch(() => 0),
     ]);
-    setThreads(t.threads ?? []);
+    const inboxList: ThreadRow[] = inboxRes.threads ?? [];
+    const archList: ThreadRow[] = archRes.threads ?? [];
+    setInboxThreads(inboxList);
+    setArchivedThreads(archList);
     setAccounts(a.accounts ?? []);
-    setArchivedCount(archCount);
     setLoading(false);
 
-    // Keep the iOS app icon badge in sync with total unread.
+    // Keep the iOS app icon badge in sync with total unread (inbox only).
     if (typeof navigator !== "undefined" && "setAppBadge" in navigator) {
-      const total = (t.threads ?? []).reduce(
+      const total = inboxList.reduce(
         (sum: number, x: ThreadRow) => sum + (x.unreadCount || 0),
         0,
       );
@@ -128,7 +136,7 @@ export default function ThreadList() {
       offServer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountFilter, q, view, onlyUnanswered]);
+  }, [accountFilter, q, onlyUnanswered]);
 
   // Push notification state — drives the "Enable notifications" banner below.
   const [pushState, setPushState] = useState<
