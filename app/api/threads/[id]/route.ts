@@ -68,6 +68,12 @@ export async function PATCH(
   }
   if (Array.isArray(body.tags)) allowed.tags = JSON.stringify(body.tags);
 
+  // Manual "viewed" toggle: pass markedRead: true to set markedReadAt = now,
+  // or markedRead: false to clear it.
+  if ("markedRead" in body) {
+    allowed.markedReadAt = body.markedRead ? new Date() : null;
+  }
+
   const thread = await prisma.thread.update({
     where: { id: parseInt(id) },
     data: allowed,

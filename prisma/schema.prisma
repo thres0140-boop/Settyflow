@@ -50,6 +50,11 @@ model Thread {
   lastMessageAt      DateTime?
   lastMessagePreview String?
   lastMessageFromMe  Boolean  @default(false)
+  // Manual "viewed" override. When set and >= lastMessageAt, the thread
+  // shows as handled in the inbox list even if the user hasn't actually
+  // replied. A new inbound message bumps lastMessageAt past this, which
+  // automatically un-marks the thread.
+  markedReadAt       DateTime?
 
   // Optional
   notes              String?

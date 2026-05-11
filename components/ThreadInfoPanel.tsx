@@ -14,6 +14,8 @@ interface ThreadDetailLike {
   tags?: string;
   status: string;
   archived?: boolean;
+  markedReadAt?: string | null;
+  lastMessageAt?: string | null;
   account: {
     id: number;
     handle: string | null;
@@ -186,6 +188,31 @@ export default function ThreadInfoPanel({
       <VoiceClipsSection accountId={thread.account.id} threadId={thread.id} />
 
       <Section title="Actions">
+        {(() => {
+          const lastTs = thread.lastMessageAt
+            ? new Date(thread.lastMessageAt).getTime()
+            : 0;
+          const markedTs = thread.markedReadAt
+            ? new Date(thread.markedReadAt).getTime()
+            : 0;
+          const currentlyMarked = markedTs >= lastTs;
+          return (
+            <button
+              onClick={async () => {
+                await fetch(`/api/threads/${thread.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ markedRead: !currentlyMarked }),
+                });
+                notifyThreadsChanged();
+                onUpdate();
+              }}
+              className="w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 text-[var(--muted)] hover:bg-[var(--surface)] hover:text-white"
+            >
+              {currentlyMarked ? "● Mark as unviewed" : "○ Mark as viewed"}
+            </button>
+          );
+        })()}
         <button
           onClick={async () => {
             await fetch(`/api/threads/${thread.id}`, {

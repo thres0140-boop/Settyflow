@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
       lastMessageAt: t.lastMessageAt?.toISOString() ?? null,
       lastMessagePreview: t.lastMessagePreview,
       lastMessageFromMe: t.lastMessageFromMe,
+      markedReadAt: t.markedReadAt?.toISOString() ?? null,
     })),
   });
 }

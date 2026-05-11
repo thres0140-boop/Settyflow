@@ -29,6 +29,7 @@ interface ThreadRow {
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
   lastMessageFromMe: boolean;
+  markedReadAt: string | null;
 }
 
 interface AccountRow {
@@ -559,16 +560,30 @@ export default function ThreadList() {
                     profilePicUrl={t.account.profilePicUrl}
                     color={t.account.color}
                   />
-                  <p
-                    className={`flex-1 text-sm truncate ${
-                      !t.lastMessageFromMe
-                        ? "text-white"
-                        : "text-[var(--muted)]"
-                    }`}
-                  >
-                    {t.lastMessageFromMe && "↗ "}
-                    {t.lastMessagePreview ?? ""}
-                  </p>
+                  {(() => {
+                    // "Needs attention" = lead's reply is unanswered AND
+                    // the user hasn't manually dismissed it via Mark as
+                    // viewed (markedReadAt must be at or after the last
+                    // inbound message timestamp).
+                    const lastTs = t.lastMessageAt
+                      ? new Date(t.lastMessageAt).getTime()
+                      : 0;
+                    const markedTs = t.markedReadAt
+                      ? new Date(t.markedReadAt).getTime()
+                      : 0;
+                    const manuallyHandled = markedTs >= lastTs;
+                    const needsAttention = !t.lastMessageFromMe && !manuallyHandled;
+                    return (
+                      <p
+                        className={`flex-1 text-sm truncate ${
+                          needsAttention ? "text-white" : "text-[var(--muted)]"
+                        }`}
+                      >
+                        {t.lastMessageFromMe && "↗ "}
+                        {t.lastMessagePreview ?? ""}
+                      </p>
+                    );
+                  })()}
                   {t.unreadCount > 0 && (
                     <span className="shrink-0 text-[10px] bg-[var(--accent)] text-white rounded-full px-1.5 py-0.5">
                       {t.unreadCount}

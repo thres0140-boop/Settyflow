@@ -44,6 +44,8 @@ interface ThreadDetail {
   notes: string | null;
   tags?: string;
   archived?: boolean;
+  markedReadAt?: string | null;
+  lastMessageAt?: string | null;
   account: {
     id: number;
     handle: string | null;
