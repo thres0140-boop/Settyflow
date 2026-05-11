@@ -42,24 +42,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Unipile's quote_id is silently ignored on Instagram (Unipile limitation),
-  // so to give the lead any reply context we prepend a one-line preview of
-  // the quoted message. Format: ↳ "<snippet>" \n \n <user's reply>
-  let outgoingText = String(text);
-  if (replyMeta?.snippet) {
-    const snippet = replyMeta.snippet
-      .replace(/\s+/g, " ") // collapse newlines so it stays one line
-      .trim()
-      .slice(0, 80);
-    const suffix = replyMeta.snippet.trim().length > 80 ? "…" : "";
-    outgoingText = `↳ "${snippet}${suffix}"\n\n${outgoingText}`;
-  }
-
+  // Send the user's text as-is and rely on Unipile's quote_id (now sent via
+  // multipart per their SDK + support instruction) for the native IG quote bubble.
   try {
     const result: any = await sendChatMessage(
       thread.chatId,
       thread.account.unipileAccountId,
-      outgoingText,
+      String(text),
       replyMeta?.unipileId ?? null,
     );
 

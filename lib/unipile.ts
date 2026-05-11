@@ -132,15 +132,28 @@ export async function sendChatMessage(
   text: string,
   replyToUnipileMsgId?: string | null,
 ) {
-  const body: Record<string, unknown> = { text, account_id: accountId };
-  // Unipile uses `quote_id` for native replies (confirmed via docs).
+  // Unipile's own SDK sends this endpoint as multipart/form-data, not JSON.
+  // Their support confirmed quote_id is the correct param for native replies,
+  // and empirically the server only honors it through the multipart path.
+  const fd = new FormData();
+  fd.append("text", text);
+  fd.append("account_id", accountId);
   if (replyToUnipileMsgId) {
-    body.quote_id = replyToUnipileMsgId;
+    fd.append("quote_id", replyToUnipileMsgId);
   }
-  return call<any>(`/chats/${encodeURIComponent(chatId)}/messages`, {
+
+  const res = await fetch(`${base()}/chats/${encodeURIComponent(chatId)}/messages`, {
     method: "POST",
-    body: JSON.stringify(body),
+    headers: { "X-API-KEY": key(), accept: "application/json" },
+    body: fd,
   });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      `Unipile send failed (${res.status}): ${JSON.stringify(json).slice(0, 300)}`,
+    );
+  }
+  return json;
 }
 
 // Send a file (voice note, image, etc) into a chat.
