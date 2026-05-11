@@ -37,14 +37,20 @@ html, body {
 
 /* iOS-style slide-in animation when opening / switching chats. The chat
    starts off-screen to the right and slides into place, mimicking the
-   native iOS push-navigation transition. */
+   native iOS push-navigation transition. Mobile only — on desktop the
+   sidebar + thread are side-by-side so a horizontal slide looks wrong. */
 .thread-page-enter {
   display: flex;
   flex: 1 1 0%;
   min-height: 0;
   min-width: 0;
-  will-change: transform, opacity;
-  animation: thread-slide-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (max-width: 767px) {
+  .thread-page-enter {
+    will-change: transform, opacity;
+    animation: thread-slide-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
 }
 
 @keyframes thread-slide-in {
