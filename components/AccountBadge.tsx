@@ -8,6 +8,14 @@ interface Props {
   size?: number;
 }
 
+// Coach IG profiles often set their display name to "Real Name | Tagline"
+// (e.g. "Rowan van den Hurk | Online Transformatie Coach"). When we have to
+// fall back to the display name in the badge, trim everything after the
+// first separator so the chip stays readable.
+function shortName(s: string): string {
+  return s.split(/[|·•—–-]/)[0]?.trim() || s;
+}
+
 // Small profile pic + tag showing which coach account a thread belongs to.
 export default function AccountBadge({
   handle,
@@ -16,10 +24,11 @@ export default function AccountBadge({
   color,
   size = 16,
 }: Props) {
-  const initial = (handle ?? displayName ?? "?").charAt(0).toUpperCase();
+  const label = handle ? `@${handle}` : displayName ? shortName(displayName) : "Account";
+  const initial = label.replace(/^@/, "").charAt(0).toUpperCase() || "?";
   return (
     <span
-      title={handle ? `@${handle}` : displayName ?? "Account"}
+      title={label}
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium"
       style={{ backgroundColor: `${color}26`, color }}
     >
@@ -46,7 +55,7 @@ export default function AccountBadge({
           {initial}
         </span>
       )}
-      {handle ? `@${handle}` : displayName}
+      {label}
     </span>
   );
 }

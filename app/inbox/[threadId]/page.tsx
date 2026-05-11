@@ -12,7 +12,7 @@ import {
   onDismissInfoSheet,
 } from "@/lib/events";
 import { getThreadCache, setThreadCache } from "@/lib/threadCache";
-import { leadLabel, leadInitial } from "@/lib/leadLabel";
+import { leadLabel, leadInitial, accountLabel } from "@/lib/leadLabel";
 
 interface Message {
   id: number;
@@ -209,9 +209,7 @@ export default function ThreadPage() {
     setReplyTo({
       messageId: m.id,
       snippet: m.content.slice(0, 200),
-      authorLabel: mine
-        ? `@${thread.account.handle ?? thread.account.displayName ?? "you"}`
-        : leadLabel(thread),
+      authorLabel: mine ? accountLabel(thread.account) : leadLabel(thread),
     });
     setTimeout(() => textareaRef.current?.focus(), 0);
   }
@@ -275,7 +273,7 @@ export default function ThreadPage() {
             <div className="text-xs text-[var(--muted)] truncate">
               via{" "}
               <span style={{ color: thread.account.color }}>
-                @{thread.account.handle ?? thread.account.displayName ?? "account"}
+                {accountLabel(thread.account)}
               </span>
             </div>
           </div>
@@ -324,7 +322,7 @@ export default function ThreadPage() {
           const mine = m.direction === "out";
           const hasReply = Boolean(m.replyToSnippet);
           const replyAuthor = m.replyToFromMe
-            ? `@${thread.account.handle ?? thread.account.displayName ?? "you"}`
+            ? accountLabel(thread.account)
             : (m.replyToAuthorName ?? leadLabel(thread));
           return (
             <SwipeToReply key={m.id} onReply={() => startReply(m)}>
@@ -462,7 +460,7 @@ export default function ThreadPage() {
             placeholder={
               replyTo
                 ? `Reply to ${replyTo.authorLabel}…`
-                : `Reply as @${thread.account.handle ?? thread.account.displayName ?? "account"}…`
+                : `Reply as ${accountLabel(thread.account)}…`
             }
             rows={1}
             onKeyDown={(e) => {
