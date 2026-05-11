@@ -133,8 +133,11 @@ export async function sendChatMessage(
   replyToUnipileMsgId?: string | null,
 ) {
   // Unipile's own SDK sends this endpoint as multipart/form-data, not JSON.
-  // Their support confirmed quote_id is the correct param for native replies,
-  // and empirically the server only honors it through the multipart path.
+  // Their support confirmed quote_id is the correct param for native replies.
+  console.log(
+    `[send] chat=${chatId} account=${accountId} textLen=${text.length} quote_id=${replyToUnipileMsgId ?? "<none>"}`,
+  );
+
   const fd = new FormData();
   fd.append("text", text);
   fd.append("account_id", accountId);
@@ -148,11 +151,37 @@ export async function sendChatMessage(
     body: fd,
   });
   const json = await res.json().catch(() => ({}));
+  console.log(`[send] response status=${res.status} body=${JSON.stringify(json).slice(0, 300)}`);
+
   if (!res.ok) {
     throw new Error(
       `Unipile send failed (${res.status}): ${JSON.stringify(json).slice(0, 300)}`,
     );
   }
+
+  // If we sent with quote_id, re-fetch the message after a moment to see if
+  // Unipile actually applied the quote — this confirms whether the issue is
+  // on our send or on their side.
+  if (replyToUnipileMsgId) {
+    const sentId = json?.message_id ?? json?.id;
+    if (sentId) {
+      try {
+        await new Promise((r) => setTimeout(r, 800));
+        const verify = await fetch(
+          `${base()}/chats/${encodeURIComponent(chatId)}/messages?account_id=${encodeURIComponent(accountId)}&limit=1`,
+          { headers: { "X-API-KEY": key(), accept: "application/json" }, cache: "no-store" },
+        );
+        const verifyJson: any = await verify.json().catch(() => ({}));
+        const newest = verifyJson?.items?.[0];
+        console.log(
+          `[send] verify newest id=${newest?.id} quoted=${newest?.quoted ? "YES " + JSON.stringify(newest.quoted).slice(0, 200) : "NO"}`,
+        );
+      } catch (e) {
+        console.warn("[send] verify failed:", e);
+      }
+    }
+  }
+
   return json;
 }
 
