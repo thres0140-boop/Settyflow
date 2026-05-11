@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AccountBadge from "@/components/AccountBadge";
 import { statusColor, statusLabel } from "@/lib/statusColors";
-import { onThreadsChanged, onServerEvent } from "@/lib/events";
+import { onThreadsChanged, onServerEvent, notifyThreadsChanged } from "@/lib/events";
 import { notifyIfBackgrounded } from "@/lib/notifications";
 import { registerPush } from "@/lib/push-client";
+import SwipeToArchive from "@/components/SwipeToArchive";
 
 interface ThreadRow {
   id: number;
@@ -160,6 +161,26 @@ export default function ThreadList() {
       setPushState("needs_gesture");
     }
   }, []);
+
+  // Optimistic archive — pull the row out of state immediately (so the swipe
+  // animation reads as a clean disappear), then fire the PATCH. If it fails
+  // we just reload from the source of truth.
+  async function archiveThread(threadId: number) {
+    setInboxThreads((prev) => prev.filter((t) => t.id !== threadId));
+    try {
+      const res = await fetch(`/api/threads/${threadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived: true }),
+      });
+      if (!res.ok) throw new Error(`archive failed: ${res.status}`);
+      // Refresh both lists so the archive view picks up the new thread.
+      notifyThreadsChanged();
+    } catch (e) {
+      console.warn("[archive] failed, reloading:", e);
+      load();
+    }
+  }
 
   async function enablePush() {
     const status = await registerPush();
@@ -374,9 +395,9 @@ export default function ThreadList() {
         )}
         {threads.map((t) => {
           const isActive = activeId === t.id;
-          return (
+          const isArchiveView = view === "archive";
+          const row = (
             <Link
-              key={t.id}
               href={`/inbox/${t.id}`}
               className={`flex items-start gap-3 px-4 py-3 border-l-2 ${
                 isActive
@@ -445,6 +466,19 @@ export default function ThreadList() {
                 </div>
               </div>
             </Link>
+          );
+          // Only allow swipe-to-archive on the inbox view (no point archiving
+          // an already-archived thread, and the gesture would be confusing).
+          if (isArchiveView) {
+            return <div key={t.id}>{row}</div>;
+          }
+          return (
+            <SwipeToArchive
+              key={t.id}
+              onArchive={() => archiveThread(t.id)}
+            >
+              {row}
+            </SwipeToArchive>
           );
         })}
       </div>
