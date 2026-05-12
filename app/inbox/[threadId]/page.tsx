@@ -184,6 +184,30 @@ export default function ThreadPage() {
     const reply = replyTo;
     setText("");
     setReplyTo(null);
+
+    // Optimistic: drop the outbound message into local state immediately
+    // so it shows up the instant the user hits send. Negative temp id so
+    // it can't collide with a real DB id. The next load() will replace it
+    // with the canonical row from the server.
+    const tempId = -Date.now();
+    const optimistic: Message = {
+      id: tempId,
+      direction: "out",
+      content: body,
+      sentAt: new Date().toISOString(),
+      authorName: null,
+      unipileMsgId: null,
+      replyToUnipileMsgId: null,
+      replyToSnippet: reply?.snippet ?? null,
+      replyToFromMe: null,
+      replyToAuthorName: reply?.authorLabel ?? null,
+      deliveredAt: null,
+      seenAt: null,
+    };
+    setThread((prev) =>
+      prev ? { ...prev, messages: [...prev.messages, optimistic] } : prev,
+    );
+
     const res = await fetch("/api/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -195,6 +219,12 @@ export default function ThreadPage() {
     });
     setSending(false);
     if (!res.ok) {
+      // Roll the optimistic message back out + restore the textarea.
+      setThread((prev) =>
+        prev
+          ? { ...prev, messages: prev.messages.filter((m) => m.id !== tempId) }
+          : prev,
+      );
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "send_failed");
       setText(body);
