@@ -17,9 +17,13 @@ export async function GET(req: NextRequest) {
       archived,
       ...(accountId ? { accountId: parseInt(accountId) } : {}),
       ...(status ? { status } : {}),
-      // "Unanswered" = the last message in the thread is from the lead,
-      // meaning we haven't replied yet.
-      ...(unanswered ? { lastMessageFromMe: false } : {}),
+      // "Unanswered" = the last message is from the lead AND the user
+      // hasn't manually marked the thread as viewed. The webhook clears
+      // markedReadAt on each new inbound message, so this null check is
+      // sufficient — a thread can't be "marked viewed" past a newer reply.
+      ...(unanswered
+        ? { lastMessageFromMe: false, markedReadAt: null }
+        : {}),
       ...(q
         ? {
             OR: [

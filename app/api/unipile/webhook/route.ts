@@ -268,6 +268,10 @@ async function ingestMessage(
       lastMessagePreview: content.slice(0, 200),
       lastMessageFromMe: isOwn,
       unreadCount: shouldBumpUnread ? ({ increment: 1 } as any) : undefined,
+      // A new inbound message resets the manual "viewed" mark — the user
+      // hasn't seen this NEW message even if they marked the previous
+      // ones as handled.
+      markedReadAt: !isOwn ? null : undefined,
     },
   });
 

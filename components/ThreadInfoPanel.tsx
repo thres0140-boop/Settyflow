@@ -209,7 +209,7 @@ export default function ThreadInfoPanel({
               }}
               className="w-full text-left text-sm px-3 py-2 rounded-lg flex items-center gap-2 text-[var(--muted)] hover:bg-[var(--surface)] hover:text-white"
             >
-              {currentlyMarked ? "● Mark as unviewed" : "○ Mark as viewed"}
+              {currentlyMarked ? "● Mark as unviewed" : "✓ Mark as handled"}
             </button>
           );
         })()}
