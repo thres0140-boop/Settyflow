@@ -122,6 +122,28 @@ export interface UnipileAttendee {
   is_self?: number;
 }
 
+// Download the raw bytes of a message attachment (voice note, image, etc.)
+// Unipile's "Retrieve an attachment" endpoint returns the binary stream when
+// you ask for it without an accept header for json. We pass through the
+// Content-Type from Unipile so the browser can play / render it correctly.
+export async function downloadAttachment(opts: {
+  messageId: string;
+  attachmentId: string;
+  accountId: string;
+}): Promise<{ bytes: Buffer; contentType: string }> {
+  const url = `${base()}/messages/${encodeURIComponent(opts.messageId)}/attachments/${encodeURIComponent(opts.attachmentId)}?account_id=${encodeURIComponent(opts.accountId)}`;
+  const res = await fetch(url, {
+    headers: { "X-API-KEY": key() },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`unipile attachment fetch failed: ${res.status}`);
+  }
+  const contentType = res.headers.get("content-type") ?? "application/octet-stream";
+  const bytes = Buffer.from(await res.arrayBuffer());
+  return { bytes, contentType };
+}
+
 export async function getChatAttendees(chatId: string, accountId: string) {
   return call<{ items?: UnipileAttendee[] }>(
     `/chats/${encodeURIComponent(chatId)}/attendees?account_id=${encodeURIComponent(accountId)}`,

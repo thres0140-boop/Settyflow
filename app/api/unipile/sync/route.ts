@@ -252,6 +252,14 @@ export async function POST(req: NextRequest) {
               if (dup) continue;
             }
             const isOwn: boolean = Boolean(m.is_sender);
+            const msgAttachments = (m.attachments ?? [])
+              .map((a: any) => ({
+                id: a.id ?? a.attachment_id ?? null,
+                type: a.type ?? a.file_type ?? "file",
+                mime: a.mime_type ?? a.mimetype ?? null,
+                durationMs: a.duration ?? a.duration_ms ?? null,
+              }))
+              .filter((a: any) => a.id);
             await prisma.message.create({
               data: {
                 threadId: thread.id,
@@ -262,6 +270,7 @@ export async function POST(req: NextRequest) {
                 authorName: isOwn ? null : leadName,
                 authorHandle: isOwn ? null : leadHandle,
                 sentAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+                attachments: JSON.stringify(msgAttachments),
               },
             });
             msgCount++;

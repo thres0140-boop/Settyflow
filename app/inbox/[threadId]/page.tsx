@@ -14,6 +14,13 @@ import {
 import { getThreadCache, setThreadCache } from "@/lib/threadCache";
 import { leadLabel, leadInitial, accountLabel } from "@/lib/leadLabel";
 
+interface MessageAttachment {
+  id: string;
+  type: string;
+  mime: string | null;
+  durationMs: number | null;
+}
+
 interface Message {
   id: number;
   direction: "in" | "out";
@@ -27,6 +34,7 @@ interface Message {
   replyToAuthorName: string | null;
   deliveredAt: string | null;
   seenAt: string | null;
+  attachments?: MessageAttachment[];
 }
 
 interface ReplyTarget {
@@ -402,6 +410,28 @@ export default function ThreadPage() {
                     <div className="line-clamp-2">{m.replyToSnippet}</div>
                   </div>
                 )}
+                {/* Audio / voice attachments — proxied through our API so
+                    the browser can request them without an API key. */}
+                {(m.attachments ?? []).map((att) => {
+                  const isAudio =
+                    att.type === "audio" ||
+                    att.type === "voice" ||
+                    (att.mime ?? "").startsWith("audio/");
+                  if (!isAudio) return null;
+                  return (
+                    <audio
+                      key={att.id}
+                      controls
+                      preload="metadata"
+                      src={`/api/messages/${m.id}/attachment/${encodeURIComponent(att.id)}`}
+                      className="w-full max-w-[260px] mb-1"
+                      style={{
+                        // Compact dark-themed default look on Chrome/Safari.
+                        height: 36,
+                      }}
+                    />
+                  );
+                })}
                 {m.content}
                 <div
                   className={`text-[10px] mt-1 flex items-center gap-1 ${

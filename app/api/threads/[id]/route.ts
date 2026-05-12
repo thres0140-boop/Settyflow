@@ -38,6 +38,7 @@ export async function GET(
           replyToAuthorName: true,
           deliveredAt: true,
           seenAt: true,
+          attachments: true,
         },
       },
     },
@@ -53,7 +54,20 @@ export async function GET(
     });
   }
 
-  return NextResponse.json({ thread });
+  // Parse attachments JSON for the client so each message carries a real
+  // array instead of a JSON string.
+  const messages = thread.messages.map((m) => {
+    let parsedAttachments: any[] = [];
+    try {
+      parsedAttachments = JSON.parse(m.attachments ?? "[]");
+      if (!Array.isArray(parsedAttachments)) parsedAttachments = [];
+    } catch {
+      parsedAttachments = [];
+    }
+    return { ...m, attachments: parsedAttachments };
+  });
+
+  return NextResponse.json({ thread: { ...thread, messages } });
 }
 
 export async function PATCH(

@@ -298,6 +298,14 @@ async function ingestMessage(
           if (dup) continue;
         }
         const histIsOwn: boolean = Boolean(m.is_sender);
+        const histAttachments = (m.attachments ?? [])
+          .map((a: any) => ({
+            id: a.id ?? a.attachment_id ?? null,
+            type: a.type ?? a.file_type ?? "file",
+            mime: a.mime_type ?? a.mimetype ?? null,
+            durationMs: a.duration ?? a.duration_ms ?? null,
+          }))
+          .filter((a: any) => a.id);
         await prisma.message.create({
           data: {
             threadId: thread.id,
@@ -308,6 +316,7 @@ async function ingestMessage(
             authorName: histIsOwn ? null : leadName,
             authorHandle: histIsOwn ? null : leadHandle,
             sentAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+            attachments: JSON.stringify(histAttachments),
           },
         });
       }
@@ -327,6 +336,20 @@ async function ingestMessage(
     if (dup) return;
   }
 
+  // Normalize Unipile attachment shape into our compact JSON form. Different
+  // event types use different field names — we look in several places and
+  // store {id, type, mime, duration_ms?} per attachment.
+  const rawAttachments: any[] =
+    msg.attachments ?? body.attachments ?? [];
+  const attachments = rawAttachments
+    .map((a: any) => ({
+      id: a.id ?? a.attachment_id ?? null,
+      type: a.type ?? a.file_type ?? "file",
+      mime: a.mime_type ?? a.mimetype ?? a.contentType ?? null,
+      durationMs: a.duration ?? a.duration_ms ?? null,
+    }))
+    .filter((a) => a.id);
+
   await prisma.message.create({
     data: {
       threadId: thread.id,
@@ -337,6 +360,7 @@ async function ingestMessage(
       authorHandle: isOwn ? null : leadHandle,
       authorName: isOwn ? null : leadName,
       sentAt,
+      attachments: JSON.stringify(attachments),
     },
   });
 
