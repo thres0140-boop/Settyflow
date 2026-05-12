@@ -94,6 +94,12 @@ html, body {
   to   { transform: translateY(0); opacity: 1; }
 }
 
+/* Spinner for the "Refresh from Instagram" button */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 * { box-sizing: border-box; }
 
 button { cursor: pointer; }
