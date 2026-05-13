@@ -85,7 +85,7 @@ export default function SwipeToReply({
       onTouchMove={move}
       onTouchEnd={end}
       onTouchCancel={end}
-      className="relative"
+      className="relative min-w-0"
       style={{
         transform: `translateX(${tx}px)`,
         transition: tx === 0 ? "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)" : "none",

@@ -406,7 +406,7 @@ export default function ThreadPage() {
           return (
             <SwipeToReply key={m.id} onReply={() => startReply(m)}>
             <div
-              className={`group flex items-end gap-2 ${
+              className={`group flex items-end gap-2 min-w-0 w-full ${
                 mine ? "justify-end" : "justify-start"
               }`}
             >
@@ -429,7 +429,7 @@ export default function ThreadPage() {
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words ${
+                className={`max-w-[80%] min-w-0 rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap [overflow-wrap:anywhere] ${
                   mine
                     ? "bg-[var(--accent)] text-white"
                     : "bg-[var(--surface)] text-white border border-[var(--border)]"
