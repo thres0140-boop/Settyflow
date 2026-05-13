@@ -108,9 +108,26 @@ export default function ThreadList() {
     ]);
     const inboxList: ThreadRow[] = inboxRes.threads ?? [];
     const archList: ThreadRow[] = archRes.threads ?? [];
-    setInboxThreads(inboxList);
-    setArchivedThreads(archList);
-    setAccounts(a.accounts ?? []);
+
+    // Skip re-render if the inbox + archive lists are unchanged in any
+    // way that affects the UI. Cheap signature compare avoids the every-
+    // few-seconds full re-render of every row.
+    function sig(rows: ThreadRow[]) {
+      return rows
+        .map(
+          (r) =>
+            `${r.id}:${r.lastMessageAt ?? ""}:${r.unreadCount}:${r.status}:${r.lastMessageFromMe ? 1 : 0}:${r.markedReadAt ?? ""}`,
+        )
+        .join("|");
+    }
+    setInboxThreads((prev) => (sig(prev) === sig(inboxList) ? prev : inboxList));
+    setArchivedThreads((prev) => (sig(prev) === sig(archList) ? prev : archList));
+    setAccounts((prev) =>
+      prev.length === (a.accounts ?? []).length &&
+      prev.every((p, i) => p.id === a.accounts[i].id && p.profilePicUrl === a.accounts[i].profilePicUrl)
+        ? prev
+        : a.accounts ?? [],
+    );
     setLoading(false);
 
     // Keep the iOS app icon badge in sync with total unread (inbox only).
@@ -130,7 +147,10 @@ export default function ThreadList() {
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 5000);
+    // Fallback poll for cross-instance scenarios where SSE doesn't reach
+    // this client. Real realtime comes via onServerEvent below + the
+    // notifyThreadsChanged custom-event bus.
+    const id = setInterval(load, 15000);
     const offChange = onThreadsChanged(load);
     const offServer = onServerEvent((e) => {
       if (e.type === "message.created" || e.type === "thread.updated") {

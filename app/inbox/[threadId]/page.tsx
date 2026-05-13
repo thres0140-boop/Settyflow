@@ -142,15 +142,37 @@ export default function ThreadPage() {
     const res = await fetch(`/api/threads/${id}`);
     if (!res.ok) return;
     const data = await res.json();
-    setThread(data.thread);
-    if (data.thread) setThreadCache(Number(id), data.thread);
+    if (!data.thread) return;
+    setThreadCache(Number(id), data.thread);
+    // Skip the state update + re-render when nothing actually changed.
+    // Comparing the most-recent message id + count + status + markedReadAt
+    // covers ~all the cases that affect UI on the thread page.
+    setThread((prev) => {
+      if (
+        prev &&
+        prev.id === data.thread.id &&
+        prev.status === data.thread.status &&
+        (prev as any).markedReadAt === data.thread.markedReadAt &&
+        prev.messages.length === data.thread.messages.length &&
+        prev.messages[prev.messages.length - 1]?.id ===
+          data.thread.messages[data.thread.messages.length - 1]?.id &&
+        prev.messages[prev.messages.length - 1]?.seenAt ===
+          data.thread.messages[data.thread.messages.length - 1]?.seenAt
+      ) {
+        return prev;
+      }
+      return data.thread;
+    });
   }
 
   useEffect(() => {
     load();
-    // Poll every 3s for the open thread (cheap query, single thread).
-    // SSE doesn't work cross-instance on Vercel serverless yet.
-    const t = setInterval(load, 3000);
+    // Poll every 10s for the open thread as a fallback. SSE handles real
+    // realtime — polling exists so we still catch updates if the SSE
+    // connection drops (and because SSE doesn't work cross-instance on
+    // Vercel serverless yet, an event fired from one function instance
+    // won't reach this client if it's connected to another).
+    const t = setInterval(load, 10000);
     const off = onServerEvent((e) => {
       const evtThreadId =
         e.type === "message.created" || e.type === "thread.updated"
@@ -275,11 +297,11 @@ export default function ThreadPage() {
   }
 
   if (!thread) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-[var(--muted)]">
-        Loading…
-      </div>
-    );
+    // Empty skeleton instead of a "Loading…" word in the middle of the
+    // screen — when the API responds the real chat fades in via the
+    // page-enter animation, so a blank chat area for ~200ms looks far
+    // less jarring than centred "Loading…" text.
+    return <div className="flex-1 min-h-0" aria-busy="true" />;
   }
 
   return (
