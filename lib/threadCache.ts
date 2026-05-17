@@ -40,3 +40,37 @@ export function clearThreadCache(id: number) {
     /* ignore */
   }
 }
+
+// ---- Inbox list cache ------------------------------------------------
+// Cache the whole inbox + archived lists so the sidebar shows instantly
+// on reload from sessionStorage while fresh data fetches in the
+// background. Avoids the "Loading…" flash on every cold start.
+
+const INBOX_KEY = "settyflow:inbox-lists-v1";
+
+export interface InboxListsCache {
+  inbox: any[];
+  archived: any[];
+  accounts: any[];
+  savedAt: number;
+}
+
+export function setInboxListsCache(data: InboxListsCache) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(INBOX_KEY, JSON.stringify(data));
+  } catch {
+    /* quota */
+  }
+}
+
+export function getInboxListsCache(): InboxListsCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(INBOX_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as InboxListsCache;
+  } catch {
+    return null;
+  }
+}

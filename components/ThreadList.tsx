@@ -11,6 +11,7 @@ import { registerPush } from "@/lib/push-client";
 import SwipeToArchive from "@/components/SwipeToArchive";
 import { STATUS_META, STATUS_ORDER } from "@/lib/statusColors";
 import { leadLabel, leadInitial } from "@/lib/leadLabel";
+import { getInboxListsCache, setInboxListsCache, setThreadCache } from "@/lib/threadCache";
 
 interface ThreadRow {
   id: number;
@@ -61,15 +62,27 @@ export default function ThreadList() {
 
   // We keep BOTH inbox and archive lists pre-loaded in state so toggling
   // between them is instant — no fetch wait, no flash of stale data.
-  const [inboxThreads, setInboxThreads] = useState<ThreadRow[]>([]);
-  const [archivedThreads, setArchivedThreads] = useState<ThreadRow[]>([]);
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  // Hydrate from sessionStorage on first mount so the sidebar appears
+  // instantly on reload while fresh data fetches in the background.
+  const cachedInbox = typeof window !== "undefined" ? getInboxListsCache() : null;
+  const [inboxThreads, setInboxThreads] = useState<ThreadRow[]>(
+    (cachedInbox?.inbox as ThreadRow[]) ?? [],
+  );
+  const [archivedThreads, setArchivedThreads] = useState<ThreadRow[]>(
+    (cachedInbox?.archived as ThreadRow[]) ?? [],
+  );
+  const [accounts, setAccounts] = useState<AccountRow[]>(
+    (cachedInbox?.accounts as AccountRow[]) ?? [],
+  );
   const [accountFilter, setAccountFilter] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [view, setView] = useState<"inbox" | "archive">("inbox");
   const [onlyUnanswered, setOnlyUnanswered] = useState(false);
   const [q, setQ] = useState("");
-  const [loading, setLoading] = useState(true);
+  // Only show the loading placeholder when we have NO cached data at all
+  // (true cold start). With a cache hit we render the stale list and let
+  // the background fetch update it silently.
+  const [loading, setLoading] = useState(() => !cachedInbox);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuClosing, setMenuClosing] = useState(false);
   const menuPanelRef = useRef<HTMLDivElement>(null);
@@ -129,6 +142,14 @@ export default function ThreadList() {
         : a.accounts ?? [],
     );
     setLoading(false);
+
+    // Persist the latest snapshot so the next page load hydrates instantly.
+    setInboxListsCache({
+      inbox: inboxList,
+      archived: archList,
+      accounts: a.accounts ?? [],
+      savedAt: Date.now(),
+    });
 
     // Keep the iOS app icon badge in sync with total unread (inbox only).
     if (typeof navigator !== "undefined" && "setAppBadge" in navigator) {
@@ -513,7 +534,23 @@ export default function ThreadList() {
         )}
 
         {loading && (
-          <div className="p-6 text-sm text-[var(--muted)]">Loading…</div>
+          /* Skeleton rows — same shape as real thread rows so the
+              layout doesn't jump when data arrives. Mirrors the
+              avatar circle + two text lines + timestamp. */
+          <div aria-busy>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 px-4 py-3 border-l-2 border-transparent"
+              >
+                <div className="w-12 h-12 rounded-full bg-[var(--surface)] shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="h-3 bg-[var(--surface)] rounded w-2/3 mb-2" />
+                  <div className="h-2.5 bg-[var(--surface)] rounded w-5/6" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
         {!loading && threads.length === 0 && (
           <div className="p-6 text-sm text-[var(--muted)]">
@@ -533,9 +570,23 @@ export default function ThreadList() {
         {threads.map((t) => {
           const isActive = activeId === t.id;
           const isArchiveView = view === "archive";
+          // Eagerly fetch the thread payload on the first user signal
+          // (hover on desktop, touchstart on mobile) so by the time the
+          // click resolves the data is in sessionStorage and the thread
+          // page renders without a network round-trip.
+          const prefetchThread = () => {
+            fetch(`/api/threads/${t.id}`)
+              .then((r) => r.json())
+              .then((d) => {
+                if (d?.thread) setThreadCache(t.id, d.thread);
+              })
+              .catch(() => {});
+          };
           const row = (
             <Link
               href={`/inbox/${t.id}`}
+              onMouseEnter={prefetchThread}
+              onTouchStart={prefetchThread}
               className={`flex items-start gap-3 px-4 py-3 border-l-2 ${
                 isActive
                   ? "bg-[var(--surface-2)] border-[var(--accent)]"
