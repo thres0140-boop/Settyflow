@@ -13,6 +13,7 @@ import {
 } from "@/lib/events";
 import { getThreadCache, setThreadCache } from "@/lib/threadCache";
 import { leadLabel, leadInitial, accountLabel } from "@/lib/leadLabel";
+import { statusColor, statusLabel } from "@/lib/statusColors";
 
 interface MessageAttachment {
   id: string;
@@ -64,13 +65,6 @@ interface ThreadDetail {
   messages: Message[];
 }
 
-const STATUSES = [
-  { key: "new", label: "New" },
-  { key: "qualified", label: "Link Sent" },
-  { key: "call_booked", label: "Call Booked" },
-  { key: "follow_up", label: "Follow Up" },
-  { key: "closed", label: "Closed" },
-];
 
 export default function ThreadPage() {
   const params = useParams<{ threadId: string }>();
@@ -285,17 +279,6 @@ export default function ThreadPage() {
     }
   }
 
-  async function changeStatus(status: string) {
-    if (!thread) return;
-    await fetch(`/api/threads/${thread.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    notifyThreadsChanged();
-    load();
-  }
-
   if (!thread) {
     // Empty skeleton instead of a "Loading…" word in the middle of the
     // screen — when the API responds the real chat fades in via the
@@ -332,7 +315,28 @@ export default function ThreadPage() {
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="font-medium truncate">{leadLabel(thread)}</div>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-medium truncate">{leadLabel(thread)}</span>
+              {/* Compact status chip — replaces the fat pills row that
+                  used to sit below the header. Color matches the status
+                  meta. The full status switcher still lives in the info
+                  panel; this is just a glance-level indicator. */}
+              <span
+                className="shrink-0 inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full border"
+                style={{
+                  borderColor: `${statusColor(thread.status)}55`,
+                  color: statusColor(thread.status),
+                  background: `${statusColor(thread.status)}15`,
+                }}
+                title={`Status: ${statusLabel(thread.status)}`}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: statusColor(thread.status) }}
+                />
+                {statusLabel(thread.status)}
+              </span>
+            </div>
             <div className="text-xs text-[var(--muted)] truncate">
               via{" "}
               <span style={{ color: thread.account.color }}>
@@ -392,21 +396,6 @@ export default function ThreadPage() {
           </button>
         </div>
 
-        <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto">
-          {STATUSES.map((s) => (
-            <button
-              key={s.key}
-              onClick={() => changeStatus(s.key)}
-              className={`shrink-0 text-xs px-2.5 py-1 rounded-full border ${
-                thread.status === s.key
-                  ? "bg-white text-black border-white"
-                  : "border-[var(--border)] text-[var(--muted)]"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
       </header>
 
       <div
