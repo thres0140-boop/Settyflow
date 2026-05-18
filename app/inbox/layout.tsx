@@ -34,7 +34,7 @@ export default function InboxLayout({
       <main
         className={`${
           onThreadPage ? "flex" : "hidden md:flex"
-        } flex-1 flex-col min-w-0 bg-[var(--background)]`}
+        } flex-1 flex-col min-w-0 bg-[var(--panel)] md:p-2 md:gap-2`}
       >
         {children}
       </main>

@@ -288,8 +288,10 @@ export default function ThreadPage() {
   }
 
   return (
-    <div className="flex-1 flex min-h-0">
-      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+    <div className="flex-1 flex min-h-0 md:gap-2">
+      {/* Chat content — a black rounded panel floating inside the grey
+          frame on desktop, fills the screen on mobile. */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-[var(--background)] md:rounded-lg overflow-hidden">
       <header className="border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
           <Link
@@ -608,9 +610,9 @@ export default function ThreadPage() {
       )}
       </div>
 
-      {/* Desktop: right-side panel */}
+      {/* Desktop: right-side panel — also a floating black card */}
       {infoOpen && (
-        <div className="hidden md:flex">
+        <div className="hidden md:flex bg-[var(--background)] rounded-lg overflow-hidden">
           <ThreadInfoPanel thread={thread} onUpdate={load} />
         </div>
       )}

@@ -5,8 +5,11 @@
 export const dynamic = "force-dynamic";
 
 export default function InboxIndex() {
+  // Empty-state lives inside its own black floating panel so the grey
+  // frame around it stays visible — keeps the same architecture as when
+  // a chat IS selected.
   return (
-    <div className="hidden md:flex flex-1 items-center justify-center text-[var(--muted)] text-sm">
+    <div className="hidden md:flex flex-1 bg-[var(--background)] rounded-lg items-center justify-center text-[var(--muted)] text-sm">
       Select a conversation to open it
     </div>
   );

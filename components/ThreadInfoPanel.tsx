@@ -119,7 +119,7 @@ export default function ThreadInfoPanel({
     : null;
 
   return (
-    <aside className="md:w-80 w-full md:shrink-0 bg-[var(--panel)] md:overflow-y-auto">
+    <aside className="md:w-80 w-full md:shrink-0 bg-[var(--background)] md:overflow-y-auto">
       {/* Compact header: avatar on the left, name/handle/IG-link stacked next to it */}
       <div className="p-4 flex items-center gap-3 border-b border-[var(--border)]">
         {thread.leadProfilePic ? (

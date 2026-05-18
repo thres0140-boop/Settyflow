@@ -5,15 +5,19 @@
      side panels are noticeably LIGHTER than pure black — the contrast
      between the lifted-grey list and the pure-black chat area is what
      makes the layout pop. Earlier attempts were too dark. */
-  --background: #000000;        /* chat area — pure black */
+  /* Beeper architecture: grey canvas, content cards float as black
+     rounded panels inside the grey frame. Leftmost gutter is the
+     lighter grey, thread list is a slightly darker grey, the chat
+     content / info card / chat header are pure black floating inside. */
+  --background: #000000;        /* black floating cards (chat, info) */
   --foreground: #ffffff;
-  --gutter: #2a2a2d;            /* leftmost icon column */
-  --panel: #36363a;             /* thread list + info panel — Beeper-grey */
-  --surface: #36363a;
-  --surface-2: #4a4a52;         /* active row */
-  --surface-3: #585860;         /* layered controls */
-  --border: #44444a;
-  --muted: #b0b0b8;
+  --gutter: #36363a;            /* leftmost icon column — lighter grey */
+  --panel: #2a2a2d;             /* thread list + frame around chat */
+  --surface: #2a2a2d;
+  --surface-2: #404045;         /* active row */
+  --surface-3: #525258;         /* layered controls */
+  --border: #3a3a40;
+  --muted: #a8a8b0;
   --accent: #4e6cff;
 }
 
