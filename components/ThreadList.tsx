@@ -611,7 +611,7 @@ export default function ThreadList() {
               className={`flex items-center gap-3 px-3 py-2 mx-1.5 my-px rounded-lg transition-colors ${
                 isActive
                   ? "bg-[var(--surface-2)]"
-                  : "hover:bg-[var(--surface)]"
+                  : "hover:bg-white/[0.04]"
               }`}
             >
               <div className="relative shrink-0">

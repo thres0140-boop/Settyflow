@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  /* Beeper-style panel hierarchy: each column has its own subtle shade
-     so visual separation reads through the background, not just borders.
-     From outside in: leftmost gutter → thread list → chat area (black).
-     The info panel mirrors the thread list. */
-  --background: #000000;        /* chat area — darkest */
+  /* Beeper palette, eyedropped from their UI. The key insight: Beeper's
+     side panels are noticeably LIGHTER than pure black — the contrast
+     between the lifted-grey list and the pure-black chat area is what
+     makes the layout pop. Earlier attempts were too dark. */
+  --background: #000000;        /* chat area — pure black */
   --foreground: #ffffff;
-  --gutter: #0c0c0e;            /* leftmost icon column */
-  --panel: #16161a;             /* thread list + info panel */
-  --surface: #16161a;
-  --surface-2: #232328;         /* active row / hover-stronger */
-  --surface-3: #2e2e34;         /* layered controls */
-  --border: #232327;
-  --muted: #8a8a93;
+  --gutter: #1d1d20;            /* leftmost icon column — mid grey */
+  --panel: #27272b;             /* thread list + info panel — lighter mid grey */
+  --surface: #27272b;
+  --surface-2: #3a3a3f;         /* active row / strong hover */
+  --surface-3: #4a4a50;         /* layered controls */
+  --border: #34343a;
+  --muted: #98989f;
   --accent: #4e6cff;
 }
 
