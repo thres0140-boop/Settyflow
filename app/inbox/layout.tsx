@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import ThreadList from "@/components/ThreadList";
 import AccountSidebar from "@/components/AccountSidebar";
@@ -15,14 +16,20 @@ export default function InboxLayout({
   return (
     <div className="h-screen flex">
       {/* Beeper-style leftmost icon column. Desktop only — on mobile the
-          space is too precious and the dropdown filter handles it. */}
-      <AccountSidebar />
+          space is too precious and the dropdown filter handles it.
+          Wrapped in Suspense because it uses useSearchParams(), which
+          requires a Suspense boundary for Next.js's static analysis. */}
+      <Suspense fallback={<div className="hidden md:block" style={{ width: 64 }} />}>
+        <AccountSidebar />
+      </Suspense>
       <aside
         className={`${
           onThreadPage ? "hidden md:flex" : "flex"
         } md:w-96 w-full flex-col border-r border-[var(--border)] overflow-hidden`}
       >
-        <ThreadList />
+        <Suspense fallback={null}>
+          <ThreadList />
+        </Suspense>
       </aside>
       <main
         className={`${
