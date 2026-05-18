@@ -165,7 +165,11 @@ export default function SwipeToArchive({
             tx === 0 || committing
               ? "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)"
               : "none",
-          background: "var(--background)",
+          // Inherit from parent (the thread list panel) so rows match
+          // the surrounding panel grey. Previously hardcoded to
+          // var(--background) which made every row paint pure black on
+          // top of the panel — the source of "rows look black not grey".
+          background: "var(--panel)",
         }}
       >
         {children}
