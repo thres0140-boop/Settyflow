@@ -11,13 +11,13 @@
      content / info card / chat header are pure black floating inside. */
   --background: #000000;        /* black floating cards (chat, info) */
   --foreground: #ffffff;
-  --gutter: #4d4d52;            /* leftmost icon column — lightest grey */
-  --panel: #3d3d42;             /* thread list + frame around chat — visibly mid grey */
-  --surface: #3d3d42;
-  --surface-2: #545459;         /* active row */
-  --surface-3: #606066;         /* layered controls */
-  --border: #4c4c52;
-  --muted: #b8b8c0;
+  --gutter: #2a2a2e;            /* leftmost icon column — lighter than panel */
+  --panel: #1f1f23;             /* thread list + frame around chat — Beeper dark grey */
+  --surface: #1f1f23;
+  --surface-2: #2e2e33;         /* active row */
+  --surface-3: #3a3a3f;         /* layered controls */
+  --border: #2a2a2e;
+  --muted: #9a9aa2;
   --accent: #4e6cff;
 }
 

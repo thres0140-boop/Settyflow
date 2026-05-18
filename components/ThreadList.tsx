@@ -608,16 +608,13 @@ export default function ThreadList() {
               href={`/inbox/${t.id}`}
               onMouseEnter={prefetchThread}
               onTouchStart={prefetchThread}
-              // Beeper pattern: inactive rows are edge-to-edge and flat
-              // (no margins, no rounding) so the list reads as a single
-              // continuous block. Only the active row becomes a pill —
-              // side margins + rounded corners + lifted bg — so it pops
-              // distinctly without any horizontal divider lines between
-              // rows.
+              // Beeper-density rows: tighter padding (py-2), edge-to-edge
+              // inactive with a hairline border-bottom to separate them,
+              // active row becomes a pill (side margins + rounded + lifted).
               className={
                 isActive
-                  ? "flex items-center gap-3 px-3 py-2.5 mx-2 my-0.5 rounded-lg bg-[var(--surface-2)]"
-                  : "flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
+                  ? "flex items-center gap-3 px-3 py-2 mx-2 my-0.5 rounded-lg bg-[var(--surface-2)]"
+                  : "flex items-center gap-3 px-3 py-2 transition-colors hover:bg-white/[0.04] border-b border-white/[0.04]"
               }
             >
               <div className="relative shrink-0">
