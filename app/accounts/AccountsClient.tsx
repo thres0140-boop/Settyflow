@@ -59,6 +59,39 @@ export default function AccountsPage() {
     load();
   }
 
+  // Resync every connected account in one shot. The sync endpoint already
+  // supports calling without an accountId to sync them all, so we hit that
+  // and surface the per-account results in case one of them errored.
+  const [syncingAll, setSyncingAll] = useState(false);
+  async function syncAll() {
+    setSyncingAll(true);
+    try {
+      const res = await fetch("/api/unipile/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      const errors = (data.results ?? []).filter((r: any) => r.error);
+      if (errors.length > 0) {
+        alert(
+          `Synced with ${errors.length} error(s):\n\n` +
+            errors
+              .map(
+                (e: any) =>
+                  `Account #${e.accountId}: ${String(e.error).slice(0, 120)}`,
+              )
+              .join("\n"),
+        );
+      }
+      load();
+    } catch (e: any) {
+      alert(`Sync failed: ${String(e?.message ?? e)}`);
+    } finally {
+      setSyncingAll(false);
+    }
+  }
+
   async function importExisting() {
     setImporting(true);
     const res = await fetch("/api/unipile/import", { method: "POST" });
@@ -141,6 +174,14 @@ export default function AccountsPage() {
           </Link>
           <h1 className="text-xl font-semibold flex-1">Accounts</h1>
           <button
+            onClick={syncAll}
+            disabled={syncingAll || accounts.length === 0}
+            title="Sync every connected account in one go"
+            className="text-sm border border-[var(--border)] rounded-lg px-3 py-1.5 hover:bg-[var(--surface-2)] disabled:opacity-50"
+          >
+            {syncingAll ? "Syncing all…" : "↻ Sync all"}
+          </button>
+          <button
             onClick={importExisting}
             disabled={importing}
             title="Pull in accounts already connected via Unipile"
@@ -180,10 +221,50 @@ export default function AccountsPage() {
             start.
           </div>
         )}
-        {accounts.map((a) => (
+
+        {/* Global health banner — surfaces any accounts that aren't active
+            or that haven't synced in the last 24h. Click Sync all to fix
+            in one shot. */}
+        {(() => {
+          const issues = accounts.filter((a) => {
+            if (a.status !== "active") return true;
+            if (!a.lastSyncedAt) return true;
+            const ageMs = Date.now() - new Date(a.lastSyncedAt).getTime();
+            return ageMs > 24 * 60 * 60 * 1000;
+          });
+          if (issues.length === 0) return null;
+          return (
+            <div className="text-sm rounded-lg px-3 py-2 bg-amber-950/40 border border-amber-900/60 text-amber-200 flex items-center gap-3">
+              <span>⚠</span>
+              <div className="flex-1">
+                {issues.length} account{issues.length === 1 ? "" : "s"} may not
+                be receiving messages — last sync over 24h ago or status not
+                active.
+              </div>
+              <button
+                onClick={syncAll}
+                disabled={syncingAll}
+                className="text-xs border border-amber-700 rounded-md px-2 py-1 hover:bg-amber-900/40 disabled:opacity-50"
+              >
+                {syncingAll ? "Syncing…" : "Sync all"}
+              </button>
+            </div>
+          );
+        })()}
+
+        {accounts.map((a) => {
+          const stale = a.lastSyncedAt
+            ? Date.now() - new Date(a.lastSyncedAt).getTime() > 24 * 60 * 60 * 1000
+            : true;
+          const hasIssue = a.status !== "active" || stale;
+          return (
           <div
             key={a.id}
-            className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3"
+            className={`flex items-center gap-3 border rounded-xl p-3 ${
+              hasIssue
+                ? "bg-amber-950/20 border-amber-900/40"
+                : "bg-[var(--surface)] border-[var(--border)]"
+            }`}
           >
             <button
               type="button"
@@ -226,14 +307,27 @@ export default function AccountsPage() {
               />
             </button>
             <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">
-                {a.handle ? `@${a.handle}` : a.displayName ?? "Unknown account"}
+              <div className="font-medium truncate flex items-center gap-2">
+                <span className="truncate">
+                  {a.handle ? `@${a.handle}` : a.displayName ?? "Unknown account"}
+                </span>
+                {hasIssue && (
+                  <span
+                    className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-700/40 shrink-0"
+                    title={
+                      a.status !== "active"
+                        ? `Unipile status: ${a.status}`
+                        : "Last sync was over 24h ago — might be missing messages"
+                    }
+                  >
+                    {a.status !== "active" ? a.status : "stale"}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-[var(--muted)]">
-                {a.status}
-                {a.lastSyncedAt && (
-                  <> · synced {new Date(a.lastSyncedAt).toLocaleString()}</>
-                )}
+                {a.lastSyncedAt
+                  ? `synced ${new Date(a.lastSyncedAt).toLocaleString()}`
+                  : "never synced"}
               </div>
             </div>
             <button
@@ -258,7 +352,8 @@ export default function AccountsPage() {
               ✕
             </button>
           </div>
-        ))}
+          );
+        })}
       </main>
     </div>
   );
