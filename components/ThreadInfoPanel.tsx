@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { STATUS_META, STATUS_ORDER } from "@/lib/statusColors";
 import { notifyThreadsChanged, notifyInsertText, notifyDismissInfoSheet } from "@/lib/events";
-import { leadLabel, leadInitial, accountLabel } from "@/lib/leadLabel";
+import { accountLabel } from "@/lib/leadLabel";
 
 interface ThreadDetailLike {
   id: number;
@@ -120,37 +120,21 @@ export default function ThreadInfoPanel({
 
   return (
     <aside className="md:w-80 w-full md:shrink-0 bg-[var(--background)] md:overflow-y-auto">
-      {/* Compact header: avatar on the left, name/handle/IG-link stacked next to it */}
-      <div className="p-4 flex items-center gap-3 border-b border-[var(--border)]">
-        {thread.leadProfilePic ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thread.leadProfilePic}
-            alt=""
-            className="w-14 h-14 rounded-full object-cover shrink-0"
-          />
-        ) : (
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-medium shrink-0"
-            style={{ backgroundColor: thread.account.color }}
+      {/* The avatar/name header used to live here, but it's redundant with
+          the global top bar on the chat page which already shows the lead
+          identity. Just keep an "Open on Instagram" link if available. */}
+      {igUrl && (
+        <div className="px-4 pt-4">
+          <a
+            href={igUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-[var(--accent)] hover:underline"
           >
-            {leadInitial(thread)}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold truncate">{leadLabel(thread)}</div>
-          {igUrl && (
-            <a
-              href={igUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block mt-1 text-[11px] text-[var(--accent)] hover:underline"
-            >
-              Open on Instagram ↗
-            </a>
-          )}
+            Open on Instagram ↗
+          </a>
         </div>
-      </div>
+      )}
 
       <Section title="Chatting via">
         <div className="flex items-center gap-2.5">

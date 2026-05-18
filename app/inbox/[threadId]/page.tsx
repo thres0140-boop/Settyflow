@@ -288,11 +288,13 @@ export default function ThreadPage() {
   }
 
   return (
-    <div className="flex-1 flex min-h-0 md:gap-2">
-      {/* Chat content — a black rounded panel floating inside the grey
-          frame on desktop, fills the screen on mobile. */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-[var(--background)] md:rounded-lg overflow-hidden">
-      <header className="border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur pt-safe">
+    <div className="flex-1 flex flex-col min-h-0 md:gap-2">
+      {/* Top bar — single floating black panel showing who you're chatting
+          with. Spans both the chat area and the info panel on desktop so
+          they sit aligned at the same starting height below it. On mobile
+          the info panel is a bottom sheet so the bar just sits above the
+          chat. */}
+      <header className="shrink-0 bg-[var(--background)] md:rounded-lg overflow-hidden pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
           <Link
             href="/inbox"
@@ -399,6 +401,11 @@ export default function ThreadPage() {
         </div>
 
       </header>
+
+      {/* Below the top bar: chat content + info panel side by side, both
+          starting at the same height. */}
+      <div className="flex-1 flex min-h-0 md:gap-2">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-[var(--background)] md:rounded-lg overflow-hidden">
 
       <div
         ref={scrollRef}
@@ -616,6 +623,7 @@ export default function ThreadPage() {
           <ThreadInfoPanel thread={thread} onUpdate={load} />
         </div>
       )}
+      </div>{/* /chat + info side-by-side row */}
 
       {/* Mobile: bottom sheet */}
       {infoOpen && (
