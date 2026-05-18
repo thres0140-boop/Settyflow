@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import ThreadList from "@/components/ThreadList";
+import AccountSidebar from "@/components/AccountSidebar";
 
 export default function InboxLayout({
   children,
@@ -13,6 +14,9 @@ export default function InboxLayout({
 
   return (
     <div className="h-screen flex">
+      {/* Beeper-style leftmost icon column. Desktop only — on mobile the
+          space is too precious and the dropdown filter handles it. */}
+      <AccountSidebar />
       <aside
         className={`${
           onThreadPage ? "hidden md:flex" : "flex"

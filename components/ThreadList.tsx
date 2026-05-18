@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AccountBadge from "@/components/AccountBadge";
 import { statusColor, statusLabel } from "@/lib/statusColors";
 import { onThreadsChanged, onServerEvent, notifyThreadsChanged } from "@/lib/events";
@@ -57,8 +57,12 @@ function timeAgo(iso: string | null) {
 
 export default function ThreadList() {
   const pathname = usePathname();
+  const sp = useSearchParams();
   const activeMatch = pathname.match(/\/inbox\/(\d+)/);
   const activeId = activeMatch ? parseInt(activeMatch[1]) : null;
+  // Account filter driven by ?account=ID URL param (set by AccountSidebar).
+  const urlAccount = sp.get("account");
+  const urlAccountId = urlAccount ? parseInt(urlAccount) : null;
 
   // We keep BOTH inbox and archive lists pre-loaded in state so toggling
   // between them is instant — no fetch wait, no flash of stale data.
@@ -74,7 +78,18 @@ export default function ThreadList() {
   const [accounts, setAccounts] = useState<AccountRow[]>(
     (cachedInbox?.accounts as AccountRow[]) ?? [],
   );
-  const [accountFilter, setAccountFilter] = useState<number | null>(null);
+  // accountFilter is now driven by the URL ?account= param so the leftmost
+  // AccountSidebar and the dropdown menu both write/read the same source
+  // of truth. setAccountFilter pushes to URL; the read above re-derives.
+  const router = useRouter();
+  const accountFilter = urlAccountId;
+  function setAccountFilter(id: number | null) {
+    const params = new URLSearchParams(sp.toString());
+    if (id == null) params.delete("account");
+    else params.set("account", String(id));
+    const qs = params.toString();
+    router.push(`/inbox${qs ? `?${qs}` : ""}`);
+  }
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [view, setView] = useState<"inbox" | "archive">("inbox");
   const [onlyUnanswered, setOnlyUnanswered] = useState(false);
