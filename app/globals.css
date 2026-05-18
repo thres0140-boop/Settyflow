@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  /* Beeper-style palette: pure-black canvas, neutral cool greys for
-     surfaces, brand indigo accent. The active conversation tone is the
-     same as --surface-2 so selection feels like a subtle fill rather
-     than a coloured border. */
-  --background: #000000;
+  /* Beeper-style panel hierarchy: each column has its own subtle shade
+     so visual separation reads through the background, not just borders.
+     From outside in: leftmost gutter → thread list → chat area (black).
+     The info panel mirrors the thread list. */
+  --background: #000000;        /* chat area — darkest */
   --foreground: #ffffff;
-  --surface: #141416;
-  --surface-2: #1f1f23;
-  --surface-3: #2a2a2f;
+  --gutter: #0c0c0e;            /* leftmost icon column */
+  --panel: #16161a;             /* thread list + info panel */
+  --surface: #16161a;
+  --surface-2: #232328;         /* active row / hover-stronger */
+  --surface-3: #2e2e34;         /* layered controls */
   --border: #232327;
   --muted: #8a8a93;
   --accent: #4e6cff;

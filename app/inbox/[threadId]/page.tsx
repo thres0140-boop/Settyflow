@@ -559,10 +559,12 @@ export default function ThreadPage() {
             e.preventDefault();
             send();
           }}
-          className="px-3 pt-3 flex gap-2"
+          className="px-3 pt-3 pb-3 md:pb-3 flex gap-2"
           style={{
-            // Push the input well clear of the iOS home indicator.
-            paddingBottom: `calc(env(safe-area-inset-bottom) + 2.25rem)`,
+            // iOS PWA needs to clear the home indicator; desktop doesn't.
+            // env() resolves to 0 on desktop so the calc is just 0.75rem
+            // there, but on iOS standalone we add the safe-area inset.
+            paddingBottom: `calc(env(safe-area-inset-bottom) + 0.75rem)`,
           }}
         >
           <textarea

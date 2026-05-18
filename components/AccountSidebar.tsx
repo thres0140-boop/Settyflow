@@ -55,7 +55,7 @@ export default function AccountSidebar() {
 
   return (
     <aside
-      className="hidden md:flex flex-col items-center gap-3 py-3 px-2 border-r border-[var(--border)] bg-[var(--surface-2)]/40"
+      className="hidden md:flex flex-col items-center gap-3 py-3 px-2 bg-[var(--gutter)]"
       style={{ width: 64 }}
     >
       {/* All Inbox */}
