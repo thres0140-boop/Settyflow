@@ -1,13 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --surface: #141414;
-  --surface-2: #1c1c1c;
-  --border: #262626;
-  --muted: #888;
-  --accent: #6366f1;
+  /* Beeper-style palette: pure-black canvas, neutral cool greys for
+     surfaces, brand indigo accent. The active conversation tone is the
+     same as --surface-2 so selection feels like a subtle fill rather
+     than a coloured border. */
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #141416;
+  --surface-2: #1f1f23;
+  --surface-3: #2a2a2f;
+  --border: #232327;
+  --muted: #8a8a93;
+  --accent: #4e6cff;
 }
 
 @theme inline {
@@ -15,6 +20,7 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
   --color-muted: var(--muted);
   --color-accent: var(--accent);

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import AccountBadge from "@/components/AccountBadge";
 import { statusColor, statusLabel } from "@/lib/statusColors";
 import { onThreadsChanged, onServerEvent, notifyThreadsChanged } from "@/lib/events";
 import { notifyIfBackgrounded } from "@/lib/notifications";
@@ -597,15 +596,22 @@ export default function ThreadList() {
               })
               .catch(() => {});
           };
+          // Beeper-style compact row: ~62px tall, no left-border accent,
+          // active state is just a subtle fill, account-tinted status dot
+          // overlaid bottom-right of the avatar (no verbose chip).
+          const lastTs = t.lastMessageAt ? new Date(t.lastMessageAt).getTime() : 0;
+          const markedTs = t.markedReadAt ? new Date(t.markedReadAt).getTime() : 0;
+          const manuallyHandled = markedTs >= lastTs;
+          const needsAttention = !t.lastMessageFromMe && !manuallyHandled;
           const row = (
             <Link
               href={`/inbox/${t.id}`}
               onMouseEnter={prefetchThread}
               onTouchStart={prefetchThread}
-              className={`flex items-start gap-3 px-4 py-3 border-l-2 ${
+              className={`flex items-center gap-3 px-3 py-2 mx-1.5 my-px rounded-lg transition-colors ${
                 isActive
-                  ? "bg-[var(--surface-2)] border-[var(--accent)]"
-                  : "border-transparent hover:bg-[var(--surface)]"
+                  ? "bg-[var(--surface-2)]"
+                  : "hover:bg-[var(--surface)]"
               }`}
             >
               <div className="relative shrink-0">
@@ -614,64 +620,47 @@ export default function ThreadList() {
                   <img
                     src={t.leadProfilePic}
                     alt=""
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium"
                     style={{ backgroundColor: t.account.color }}
                   >
                     {leadInitial(t)}
                   </div>
                 )}
-                <span
-                  className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--background)]"
-                  style={{ backgroundColor: statusColor(t.status) }}
-                  title={`Status: ${statusLabel(t.status)}`}
-                />
+                {/* Tiny coloured dot in the corner = pipeline status. Only
+                    shown when status != "new" to avoid clutter on default. */}
+                {t.status !== "new" && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--background)]"
+                    style={{ backgroundColor: statusColor(t.status) }}
+                    title={`Status: ${statusLabel(t.status)}`}
+                  />
+                )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-medium truncate">{leadLabel(t)}</span>
-                  <span className="ml-auto text-xs text-[var(--muted)] shrink-0">
+                <div className="flex items-baseline gap-2 mb-0.5">
+                  <span className="font-medium text-[14px] truncate text-[var(--foreground)]">
+                    {leadLabel(t)}
+                  </span>
+                  <span className="ml-auto text-[11px] text-[var(--muted)] shrink-0">
                     {timeAgo(t.lastMessageAt)}
                   </span>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <AccountBadge
-                    handle={t.account.handle}
-                    displayName={t.account.displayName}
-                    profilePicUrl={t.account.profilePicUrl}
-                    color={t.account.color}
-                  />
-                  {(() => {
-                    // "Needs attention" = lead's reply is unanswered AND
-                    // the user hasn't manually dismissed it via Mark as
-                    // viewed (markedReadAt must be at or after the last
-                    // inbound message timestamp).
-                    const lastTs = t.lastMessageAt
-                      ? new Date(t.lastMessageAt).getTime()
-                      : 0;
-                    const markedTs = t.markedReadAt
-                      ? new Date(t.markedReadAt).getTime()
-                      : 0;
-                    const manuallyHandled = markedTs >= lastTs;
-                    const needsAttention = !t.lastMessageFromMe && !manuallyHandled;
-                    return (
-                      <p
-                        className={`flex-1 text-sm truncate ${
-                          needsAttention ? "text-white" : "text-[var(--muted)]"
-                        }`}
-                      >
-                        {t.lastMessageFromMe && "↗ "}
-                        {t.lastMessagePreview ?? ""}
-                      </p>
-                    );
-                  })()}
+                  <p
+                    className={`flex-1 text-[13px] truncate ${
+                      needsAttention ? "text-[var(--foreground)]" : "text-[var(--muted)]"
+                    }`}
+                  >
+                    {t.lastMessageFromMe && "↗ "}
+                    {t.lastMessagePreview ?? ""}
+                  </p>
                   {t.unreadCount > 0 && (
-                    <span className="shrink-0 text-[10px] bg-[var(--accent)] text-white rounded-full px-1.5 py-0.5">
+                    <span className="shrink-0 min-w-[18px] h-[18px] text-[10px] font-semibold bg-[var(--accent)] text-white rounded-full flex items-center justify-center px-1">
                       {t.unreadCount}
                     </span>
                   )}
