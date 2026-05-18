@@ -56,13 +56,13 @@ export default function AccountSidebar() {
   return (
     <aside
       className="hidden md:flex flex-col items-center gap-3 py-3 px-2 bg-[var(--gutter)]"
-      style={{ width: 52 }}
+      style={{ width: 44 }}
     >
       {/* All Inbox */}
       <button
         onClick={() => setFilter(null)}
         title="All inboxes"
-        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+        className={`w-7 h-7 rounded-xl flex items-center justify-center transition-colors ${
           onInbox && !activeAccountId
             ? "bg-[var(--accent)] text-white"
             : "bg-[var(--surface)] text-[var(--muted)] hover:text-white hover:bg-[var(--surface-2)]"
@@ -97,11 +97,11 @@ export default function AccountSidebar() {
                 <img
                   src={a.profilePicUrl}
                   alt=""
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-7 h-7 rounded-full object-cover"
                 />
               ) : (
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white font-medium"
                   style={{ backgroundColor: a.color }}
                 >
                   {(a.handle ?? a.displayName ?? "?").charAt(0).toUpperCase()}
@@ -115,7 +115,7 @@ export default function AccountSidebar() {
       <Link
         href="/accounts"
         title="Manage accounts"
-        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+        className={`w-7 h-7 rounded-xl flex items-center justify-center transition-colors ${
           onAccounts
             ? "bg-[var(--accent)] text-white"
             : "text-[var(--muted)] hover:text-white hover:bg-[var(--surface)]"
