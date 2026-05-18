@@ -380,7 +380,7 @@ export default function ThreadList() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 bg-[var(--background)]/95 backdrop-blur border-b border-[var(--border)] pt-safe">
+      <header className="sticky top-0 z-10 bg-[var(--panel)]/95 backdrop-blur pt-safe">
         <div className="px-4 py-3 flex items-center gap-3">
           {view === "archive" && (
             <button
@@ -608,11 +608,17 @@ export default function ThreadList() {
               href={`/inbox/${t.id}`}
               onMouseEnter={prefetchThread}
               onTouchStart={prefetchThread}
-              className={`flex items-center gap-3 px-3 py-2 mx-1.5 my-px rounded-lg transition-colors ${
+              // Beeper pattern: inactive rows are edge-to-edge and flat
+              // (no margins, no rounding) so the list reads as a single
+              // continuous block. Only the active row becomes a pill —
+              // side margins + rounded corners + lifted bg — so it pops
+              // distinctly without any horizontal divider lines between
+              // rows.
+              className={
                 isActive
-                  ? "bg-[var(--surface-2)]"
-                  : "hover:bg-white/[0.04]"
-              }`}
+                  ? "flex items-center gap-3 px-3 py-2.5 mx-2 my-0.5 rounded-lg bg-[var(--surface-2)]"
+                  : "flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
+              }
             >
               <div className="relative shrink-0">
                 {t.leadProfilePic ? (
