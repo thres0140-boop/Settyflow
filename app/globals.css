@@ -12,8 +12,8 @@
   --background: #000000;        /* black floating cards (chat, info) */
   --foreground: #ffffff;
   --gutter: #3c3c3c;            /* leftmost icon column — exact value from Cenk */
-  --panel: #1f1f23;             /* thread list + frame around chat */
-  --surface: #1f1f23;
+  --panel: #272727;             /* thread list + frame around chat — exact value from Cenk */
+  --surface: #272727;
   --surface-2: #2e2e33;         /* active row */
   --surface-3: #3a3a3f;         /* layered controls */
   --border: #2a2a2e;
