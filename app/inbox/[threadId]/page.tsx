@@ -535,7 +535,7 @@ export default function ThreadPage() {
       </div>
 
       <div
-        className="border-t border-[var(--border)] bg-[var(--background)]"
+        className="bg-[var(--background)]"
         style={{
           // Extend the input bar to the bottom edge of the screen, but keep
           // the textarea + send button above the iOS home indicator by adding
