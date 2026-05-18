@@ -626,11 +626,11 @@ export default function ThreadList() {
                   <img
                     src={t.leadProfilePic}
                     alt=""
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="w-9 h-9 rounded-full object-cover"
                   />
                 ) : (
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-medium"
                     style={{ backgroundColor: t.account.color }}
                   >
                     {leadInitial(t)}
@@ -640,7 +640,7 @@ export default function ThreadList() {
                     shown when status != "new" to avoid clutter on default. */}
                 {t.status !== "new" && (
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--background)]"
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--panel)]"
                     style={{ backgroundColor: statusColor(t.status) }}
                     title={`Status: ${statusLabel(t.status)}`}
                   />

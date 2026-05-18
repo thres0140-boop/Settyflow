@@ -25,7 +25,7 @@ export default function InboxLayout({
       <aside
         className={`${
           onThreadPage ? "hidden md:flex" : "flex"
-        } md:w-96 w-full flex-col overflow-hidden bg-[var(--panel)]`}
+        } md:w-80 w-full flex-col overflow-hidden bg-[var(--panel)]`}
       >
         <Suspense fallback={null}>
           <ThreadList />
