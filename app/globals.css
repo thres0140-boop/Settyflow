@@ -7,13 +7,13 @@
      makes the layout pop. Earlier attempts were too dark. */
   --background: #000000;        /* chat area — pure black */
   --foreground: #ffffff;
-  --gutter: #1f1f23;            /* leftmost icon column — mid grey */
-  --panel: #2c2c31;             /* thread list + info panel — lifted */
-  --surface: #2c2c31;
-  --surface-2: #3f3f46;         /* active row / strong hover */
-  --surface-3: #4a4a50;         /* layered controls */
-  --border: #3a3a40;
-  --muted: #a0a0a8;
+  --gutter: #2a2a2d;            /* leftmost icon column */
+  --panel: #36363a;             /* thread list + info panel — Beeper-grey */
+  --surface: #36363a;
+  --surface-2: #4a4a52;         /* active row */
+  --surface-3: #585860;         /* layered controls */
+  --border: #44444a;
+  --muted: #b0b0b8;
   --accent: #4e6cff;
 }
 
